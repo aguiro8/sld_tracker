@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SLD TCGCSV Lookup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">GitHub Pages demo</p>
+          <h1>Secret Lair TCGCSV Pricing Page</h1>
+        </div>
+        <div class="controls">
+          <button id="refreshButton" type="button">Reload local CSV</button>
+        </div>
+      </header>
+
+      <section class="status-card">
+        <div>
+          <strong>Target endpoint</strong>
+          <div class="endpoint">https://tcgcsv.com/tcgplayer/{category_id}/{group_id}/prices</div>
+        </div>
+        <div>
+          <strong>Configured group</strong>
+          <div id="groupLabel">category 1 / group 2576</div>
+        </div>
+      </section>
+
+      <section class="results-card">
+        <div class="table-toolbar">
+          <div>
+            <strong id="resultCount">0 items</strong>
+          </div>
+          <div id="statusMessage" class="status-message">Loading CSV…</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><button type="button" class="sort-button" data-sort-key="name">Name <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" class="sort-button" data-sort-key="market">Market <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" class="sort-button" data-sort-key="quantity">Qty <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" class="sort-button" data-sort-key="tcgplayer_id">TCGPlayer <span class="sort-indicator">↕</span></button></th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
