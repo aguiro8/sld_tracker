@@ -20,7 +20,8 @@ const statusMessage = document.getElementById('statusMessage');
 const resultCount = document.getElementById('resultCount');
 const totalValue = document.getElementById('totalValue');
 const summaryCount = document.getElementById('summaryCount');
-// const matchedRows = document.getElementById('matchedRows');
+const unmatchedRowsStat = document.getElementById('unmatchedRowsStat');
+const unmatchedRows = document.getElementById('unmatchedRows');
 const refreshButton = document.getElementById('refreshButton');
 const sortButtons = document.querySelectorAll('.sort-button');
 
@@ -171,6 +172,14 @@ function updateSummary(rows) {
     summaryCount.textContent = String(rows.length);
   }
 
+  const matchedCount = rows.filter((row) => row.match).length;
+  const unmatchedCount = rows.length - matchedCount;
+
+  if (unmatchedRowsStat && unmatchedRows) {
+    unmatchedRows.textContent = String(unmatchedCount);
+    unmatchedRowsStat.classList.toggle('hidden', unmatchedCount === 0);
+  }
+
   if (!totalValue) return;
 
   const value = rows.reduce((sum, row) => {
@@ -180,10 +189,6 @@ function updateSummary(rows) {
   }, 0);
 
   totalValue.textContent = money(value);
-
-//   if (matchedRows) {
-//     matchedRows.textContent = String(rows.filter((row) => row.match).length);
-//   }
 }
 
 function renderRows(rows, priceList) {

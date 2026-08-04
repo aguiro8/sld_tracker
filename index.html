@@ -10,8 +10,8 @@
     <main class="page-shell">
       <header class="page-header">
         <div>
-          <p class="eyebrow">GitHub Pages demo</p>
-          <h1>Secret Lair TCGCSV Pricing Page</h1>
+          <!-- <p class="eyebrow">GitHub Pages demo</p> -->
+          <h1>Secret Lair Summary</h1>
         </div>
         <div class="controls">
           <button id="refreshButton" type="button">Reload local CSV</button>
@@ -39,10 +39,10 @@
             <strong>Total items</strong>
             <div id="summaryCount" class="summary-total">0</div>
           </div>
-          <!-- <div class="summary-stat">
-            <strong>Matched rows</strong>
-            <div id="matchedRows" class="summary-total">0</div>
-          </div> -->
+          <div class="summary-stat hidden" id="unmatchedRowsStat">
+            <strong>Unmatched rows</strong>
+            <div id="unmatchedRows" class="summary-total">0</div>
+          </div>
         </div>
 
         <div class="table-toolbar">

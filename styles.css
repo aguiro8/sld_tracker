@@ -129,6 +129,10 @@ button {
   font-weight: 700;
 }
 
+.hidden {
+  display: none;
+}
+
 .table-toolbar {
   display: flex;
   align-items: center;
