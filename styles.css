@@ -109,6 +109,26 @@ button {
   padding: 16px 18px 22px;
 }
 
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.summary-stat {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.summary-total {
+  margin-top: 6px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .table-toolbar {
   display: flex;
   align-items: center;

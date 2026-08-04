@@ -11,11 +11,16 @@ const PROXY_CANDIDATES = [
 const PRICE_ENDPOINT = `https://tcgcsv.com/tcgplayer/${DEFAULT_CATEGORY_ID}/${DEFAULT_GROUP_ID}/prices`;
 
 const groupLabel = document.getElementById('groupLabel');
-groupLabel.textContent = `category ${DEFAULT_CATEGORY_ID} / group ${DEFAULT_GROUP_ID}`;
+if (groupLabel) {
+  groupLabel.textContent = `category ${DEFAULT_CATEGORY_ID} / group ${DEFAULT_GROUP_ID}`;
+}
 
 const resultsBody = document.getElementById('resultsBody');
 const statusMessage = document.getElementById('statusMessage');
 const resultCount = document.getElementById('resultCount');
+const totalValue = document.getElementById('totalValue');
+const summaryCount = document.getElementById('summaryCount');
+// const matchedRows = document.getElementById('matchedRows');
 const refreshButton = document.getElementById('refreshButton');
 const sortButtons = document.querySelectorAll('.sort-button');
 
@@ -161,6 +166,26 @@ function updateSortIndicators() {
   });
 }
 
+function updateSummary(rows) {
+  if (summaryCount) {
+    summaryCount.textContent = String(rows.length);
+  }
+
+  if (!totalValue) return;
+
+  const value = rows.reduce((sum, row) => {
+    const market = Number(row.match?.marketPrice || 0);
+    const quantity = Number(row.quantity || 0);
+    return sum + (market * quantity);
+  }, 0);
+
+  totalValue.textContent = money(value);
+
+//   if (matchedRows) {
+//     matchedRows.textContent = String(rows.filter((row) => row.match).length);
+//   }
+}
+
 function renderRows(rows, priceList) {
   resultsBody.innerHTML = '';
   currentRows = rows.map((row) => {
@@ -173,6 +198,7 @@ function renderRows(rows, priceList) {
 
   const totalRows = currentRows.length;
   resultCount.textContent = `${totalRows} item${totalRows === 1 ? '' : 's'}`;
+  updateSummary(currentRows);
 
   const sortedRows = sortRows(currentRows, currentSortKey, currentSortDirection);
   sortedRows.forEach((row) => {
