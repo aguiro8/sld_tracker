@@ -326,7 +326,7 @@ async function processRows(rows) {
   }
 
   renderRows(rows, allResults.map((entry) => entry.match).filter(Boolean));
-  statusMessage.textContent = `${allResults.length} rows checked against TCGCSV JSON.`;
+  statusMessage.textContent = `${allResults.length} SLDs Found`;
 }
 
 async function loadLocalCsv() {
