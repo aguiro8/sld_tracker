@@ -29,6 +29,7 @@ const lookupCache = new Map();
 let currentRows = [];
 let currentSortKey = 'name';
 let currentSortDirection = 'asc';
+let imagePreview = null;
 
 function parseCsvContents(csvText) {
   const lines = csvText.split(/\r?\n/).filter(Boolean);
@@ -78,6 +79,76 @@ function money(value) {
     return '—';
   }
   return `$${Number(value).toFixed(2)}`;
+}
+
+function getImageUrl(row) {
+  const candidates = [
+    row['Image URL'],
+    row['image URL'],
+    row['ImageURL'],
+    row.imageUrl,
+    row.image_url,
+    row['Image URL '],
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+}
+
+function ensureImagePreview() {
+  if (imagePreview) {
+    return imagePreview;
+  }
+
+  imagePreview = document.createElement('div');
+  imagePreview.className = 'image-preview';
+  imagePreview.setAttribute('aria-hidden', 'true');
+
+  const img = document.createElement('img');
+  img.alt = 'Item preview';
+  imagePreview.appendChild(img);
+  document.body.appendChild(imagePreview);
+  return imagePreview;
+}
+
+function updateImagePreview(event, imageUrl) {
+  if (!imageUrl) {
+    return;
+  }
+
+  const preview = ensureImagePreview();
+  const img = preview.querySelector('img');
+  img.src = imageUrl;
+  preview.classList.add('visible');
+  preview.setAttribute('aria-hidden', 'false');
+
+  const padding = 16;
+  let left = event.clientX + padding;
+  let top = event.clientY + padding;
+  const previewRect = preview.getBoundingClientRect();
+  const maxLeft = window.innerWidth - previewRect.width - padding;
+  const maxTop = window.innerHeight - previewRect.height - padding;
+
+  left = Math.min(left, maxLeft);
+  top = Math.min(top, maxTop);
+
+  preview.style.left = `${Math.max(padding, left)}px`;
+  preview.style.top = `${Math.max(padding, top)}px`;
+}
+
+function hideImagePreview() {
+  if (!imagePreview) {
+    return;
+  }
+
+  imagePreview.classList.remove('visible');
+  imagePreview.setAttribute('aria-hidden', 'true');
+  imagePreview.querySelector('img').removeAttribute('src');
 }
 
 function sumTotal(quantity, market) {
@@ -218,6 +289,14 @@ function renderRows(rows, priceList) {
       <td>${row.quantity || '0'}</td>
       <td><a href="${productLink}" target="_blank" rel="noreferrer">${productId || '—'}</a></td>
     `;
+
+    const imageUrl = getImageUrl(row);
+    if (imageUrl) {
+      tr.setAttribute('data-image-url', imageUrl);
+      tr.addEventListener('mouseenter', (event) => updateImagePreview(event, imageUrl));
+      tr.addEventListener('mousemove', (event) => updateImagePreview(event, imageUrl));
+      tr.addEventListener('mouseleave', hideImagePreview);
+    }
     resultsBody.appendChild(tr);
   });
 

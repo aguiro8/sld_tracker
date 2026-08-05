@@ -189,6 +189,35 @@ tr:hover td {
   background: rgba(56, 189, 248, 0.08);
 }
 
+tr[data-image-url] {
+  cursor: zoom-in;
+}
+
+.image-preview {
+  position: fixed;
+  z-index: 1000;
+  display: none;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.36);
+  pointer-events: none;
+  max-width: min(280px, calc(100vw - 32px));
+}
+
+.image-preview.visible {
+  display: block;
+}
+
+.image-preview img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 .badge {
   padding: 2px 8px;
   border-radius: 999px;
