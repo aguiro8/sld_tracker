@@ -6,262 +6,432 @@
 
     <title>MTG Set Finder</title>
 
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
 
     <style>
-        .nav-links {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
 
-.nav-links strong {
-  color: var(--text);
-}
+      .nav-links strong {
+        color: var(--text);
+      }
 
-.finder-card {
-  margin-top: 18px;
-  padding: 18px 20px 20px;
+      .finder-card {
+        margin-top: 18px;
+        padding: 18px 20px 20px;
 
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 16px;
 
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
-}
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+      }
 
-.finder-card > label {
-  display: block;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
+      .finder-card > label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
 
-.finder-input {
-  width: 100%;
-  min-height: 300px;
-  margin-top: 10px;
-  padding: 12px 14px;
+      .finder-input {
+        width: 100%;
+        min-height: 300px;
+        margin-top: 10px;
+        padding: 12px 14px;
 
-  resize: vertical;
+        resize: vertical;
 
-  border: 1px solid var(--border);
-  border-radius: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
 
-  background: var(--panel-alt);
-  color: var(--text);
+        background: var(--panel-alt);
+        color: var(--text);
 
-  font-family:
-    "SFMono-Regular",
-    Consolas,
-    "Liberation Mono",
-    Menlo,
-    monospace;
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          "Liberation Mono",
+          Menlo,
+          monospace;
 
-  font-size: 0.9rem;
-  line-height: 1.45;
-}
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
 
-.finder-input::placeholder {
-  color: var(--muted);
-}
+      .finder-input::placeholder {
+        color: var(--muted);
+      }
 
-.finder-input:focus {
-  outline: 2px solid rgba(56, 189, 248, 0.35);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
+      .finder-input:focus {
+        outline: 2px solid rgba(56, 189, 248, 0.35);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
 
-.finder-options {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
+      .finder-options {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
 
-  margin-top: 16px;
-}
+      .finder-options label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
 
-.finder-options label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
 
-  color: var(--muted);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
+      .finder-options input[type="checkbox"] {
+        accent-color: var(--accent);
+      }
 
-.finder-options input[type="checkbox"] {
-  accent-color: var(--accent);
-}
+      .finder-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
 
-.finder-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+      .progress {
+        margin-top: 18px;
+      }
 
-  margin-top: 16px;
-}
+      .progress-bar {
+        width: 100%;
+        height: 12px;
+        margin-top: 8px;
 
-.progress {
-  margin-top: 18px;
-}
+        overflow: hidden;
 
-.progress-bar {
-  width: 100%;
-  height: 12px;
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
 
-  margin-top: 8px;
+      .progress-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.2s ease;
+      }
 
-  overflow: hidden;
+      .best-set {
+        margin-bottom: 16px;
+        padding: 14px;
 
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
+        border: 1px solid var(--border);
+        border-radius: 12px;
 
-.progress-bar-fill {
-  width: 0%;
-  height: 100%;
+        background: rgba(56, 189, 248, 0.08);
+      }
 
-  background: var(--accent);
+      .best-set > strong {
+        color: var(--muted);
+      }
 
-  transition: width 0.2s ease;
-}
+      .best-set-name {
+        margin-top: 6px;
 
-.best-set {
-  margin-bottom: 16px;
-  padding: 14px;
+        color: var(--accent);
+        font-size: 1.35rem;
+        font-weight: 700;
+      }
 
-  border: 1px solid var(--border);
-  border-radius: 12px;
+      .best-set-stats {
+        margin-top: 8px;
+        color: var(--text);
+      }
 
-  background: rgba(56, 189, 248, 0.08);
-}
+      .best-set-stats > div {
+        margin-top: 4px;
+      }
 
-.best-set > strong {
-  color: var(--muted);
-}
+      .card-details summary {
+        color: var(--accent);
+        cursor: pointer;
+      }
 
-.best-set-name {
-  margin-top: 6px;
+      .price-note {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
 
-  color: var(--accent);
-  font-size: 1.35rem;
-  font-weight: 700;
-}
+      .expensive-box {
+        margin: 12px 0;
+        padding: 12px;
 
-.best-set-stats {
-  margin-top: 8px;
-  color: var(--text);
-}
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        border-radius: 10px;
 
-.best-set-stats > div {
-  margin-top: 4px;
-}
+        background: rgba(127, 29, 29, 0.22);
+      }
 
-.card-details summary {
-  color: var(--accent);
-  cursor: pointer;
-}
+      .expensive-box strong {
+        color: #fca5a5;
+      }
 
-.price-note {
-  margin-top: 4px;
+      .expensive-box ul {
+        margin-bottom: 0;
+      }
 
-  color: var(--muted);
-  font-size: 0.78rem;
-}
+      .expensive-price {
+        color: #fca5a5;
+        font-weight: 700;
+      }
 
-.expensive-box {
-  margin: 12px 0;
-  padding: 12px;
+      .inner-card-table {
+        width: 100%;
+        margin-top: 12px;
 
-  border: 1px solid rgba(248, 113, 113, 0.35);
-  border-radius: 10px;
+        border-collapse: collapse;
+        background: transparent;
+      }
 
-  background: rgba(127, 29, 29, 0.22);
-}
+      .inner-card-table th,
+      .inner-card-table td {
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        background: transparent;
+      }
 
-.expensive-box strong {
-  color: #fca5a5;
-}
+      .inner-card-table th {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
 
-.expensive-box ul {
-  margin-bottom: 0;
-}
+      .inner-card-table td {
+        font-size: 0.88rem;
+      }
 
-.expensive-price {
-  color: #fca5a5;
-  font-weight: 700;
-}
+      .inner-card-table tr:hover td {
+        background: rgba(56, 189, 248, 0.06);
+      }
 
-.inner-card-table {
-  width: 100%;
-  margin-top: 12px;
+      .error-list {
+        margin-top: 18px;
+        padding: 14px;
 
-  border-collapse: collapse;
+        border: 1px solid var(--border);
+        border-radius: 12px;
 
-  background: transparent;
-}
+        background: rgba(248, 113, 113, 0.06);
+      }
 
-.inner-card-table th,
-.inner-card-table td {
-  padding: 8px;
+      .error-list h2 {
+        margin-top: 0;
+        font-size: 1rem;
+      }
 
-  border-bottom: 1px solid var(--border);
+      .deck-builder {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
 
-  background: transparent;
-}
+      .deck-builder-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
 
-.inner-card-table th {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
+      .deck-builder-header h2 {
+        margin: 0 0 4px;
+      }
 
-.inner-card-table td {
-  font-size: 0.88rem;
-}
+      .deck-builder-header p {
+        margin: 0;
+        color: var(--muted);
+      }
 
-.inner-card-table tr:hover td {
-  background: rgba(56, 189, 248, 0.06);
-}
+      .builder-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+      }
 
-.error-list {
-  margin-top: 18px;
-  padding: 14px;
+      .builder-stat {
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(56, 189, 248, 0.08);
+      }
 
-  border: 1px solid var(--border);
-  border-radius: 12px;
+      .builder-stat strong {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
 
-  background: rgba(248, 113, 113, 0.06);
-}
+      .coverage-bar {
+        width: 100%;
+        height: 18px;
 
-.error-list h2 {
-  margin-top: 0;
-  font-size: 1rem;
-}
+        overflow: hidden;
 
-@media (max-width: 780px) {
-  .finder-card {
-    padding: 16px;
-  }
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
 
-  .finder-input {
-    min-height: 240px;
-  }
+      .coverage-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: var(--accent);
+        transition: width 0.2s ease;
+      }
 
-  .finder-options {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
+      .coverage-percent {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-align: right;
+      }
 
-  .inner-card-table {
-    min-width: 600px;
-  }
-}
+      .builder-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .builder-panel {
+        padding: 16px;
+
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+
+      .builder-panel h3 {
+        margin-top: 0;
+      }
+
+      .selected-set-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .selected-set-item:last-child {
+        border-bottom: none;
+      }
+
+      .selected-set-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .selected-set-name {
+        font-weight: 700;
+      }
+
+      .selected-set-meta {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .new-card-count {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .duplicate-count {
+        color: var(--muted);
+      }
+
+      .remaining-cards-list {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+
+      .remaining-card {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+
+        padding: 7px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .remaining-card:last-child {
+        border-bottom: none;
+      }
+
+      .next-recommendation {
+        margin-bottom: 14px;
+        padding: 12px;
+
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 10px;
+      }
+
+      .next-recommendation strong {
+        color: var(--accent);
+      }
+
+      .set-select {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .empty-message {
+        color: var(--muted);
+      }
+
+      .complete-message {
+        padding: 16px;
+
+        text-align: center;
+        color: var(--accent);
+
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 10px;
+
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      @media (max-width: 780px) {
+        .finder-card {
+          padding: 16px;
+        }
+
+        .finder-input {
+          min-height: 240px;
+        }
+
+        .finder-options {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .inner-card-table {
+          min-width: 600px;
+        }
+
+        .builder-columns {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
 
@@ -276,15 +446,15 @@
         <div>
           <h1>MTG Set Finder</h1>
           <p>
-            Paste a ManaBox card list and find the Magic sets that contain
-            the most cards from that list.
+            Paste a ManaBox card list, compare available printings, and build
+            a set plan that covers the whole deck.
           </p>
         </div>
       </header>
 
       <section class="finder-card">
         <label for="cardInput">
-          <strong>ManaBox card list</strong>
+          ManaBox card list
         </label>
 
         <textarea
@@ -292,18 +462,16 @@
           class="finder-input"
           placeholder="Paste your list here...
 
-Examples:
-
 1 Sol Ring
-1 Swords to Plowshares
 1 Counterspell
+1 Swords to Plowshares
 1 Arcane Signet
+1 Command Tower
 
-ManaBox lines such as these also work:
+ManaBox-style lines also work:
 
 1 Sol Ring (CMM) 396
-1 Counterspell (DMR) 45
-1 Swords to Plowshares (2X2) 31"
+1 Counterspell (DMR) 45"
         ></textarea>
 
         <div class="finder-options">
@@ -313,12 +481,12 @@ ManaBox lines such as these also work:
           </label>
 
           <label>
-            <input id="excludeSecretLair" type="checkbox" />
+            <input id="excludeSecretLair" type="checkbox" checked />
             Exclude Secret Lair
           </label>
 
           <label>
-            <input id="excludePromos" type="checkbox" />
+            <input id="excludePromos" type="checkbox" checked />
             Exclude promo sets
           </label>
         </div>
@@ -334,7 +502,9 @@ ManaBox lines such as these also work:
         </div>
 
         <div id="progressArea" class="progress hidden">
-          <div id="statusMessage">Waiting...</div>
+          <div id="statusMessage" class="status-message">
+            Waiting...
+          </div>
 
           <div class="progress-bar">
             <div id="progressBarFill" class="progress-bar-fill"></div>
@@ -345,9 +515,7 @@ ManaBox lines such as these also work:
       <section id="resultsSection" class="results-card hidden">
         <div id="bestSet" class="best-set hidden">
           <strong>Best matching set</strong>
-
           <div id="bestSetName" class="best-set-name"></div>
-
           <div id="bestSetStats" class="best-set-stats"></div>
         </div>
 
@@ -377,20 +545,94 @@ ManaBox lines such as these also work:
         <div class="table-wrap">
           <table>
             <thead>
-                <tr>
-                    <th>Rank</th>
-                    <th>Set</th>
-                    <th>Code</th>
-                    <th>Cards Found</th>
-                    <th>Coverage</th>
-                    <th>Estimated Cost</th>
-                    <th>Cards / Prices</th>
-                </tr>
+              <tr>
+                <th>Select</th>
+                <th>Rank</th>
+                <th>Set</th>
+                <th>Code</th>
+                <th>Cards</th>
+                <th>New Cards</th>
+                <th>Coverage</th>
+                <th>Estimated Cost</th>
+                <th>Cards / Prices</th>
+              </tr>
             </thead>
 
             <tbody id="setResults"></tbody>
           </table>
         </div>
+
+        <section id="deckBuilder" class="deck-builder">
+          <div class="deck-builder-header">
+            <div>
+              <h2>Selected Set Plan</h2>
+              <p>
+                Select sets above and the app will track which deck cards are
+                covered and what is still missing.
+              </p>
+            </div>
+
+            <button id="clearSetsButton" type="button">
+              Clear Selected Sets
+            </button>
+          </div>
+
+          <div class="builder-summary">
+            <div class="builder-stat">
+              <strong>Selected sets</strong>
+              <div id="selectedSetCount" class="summary-total">0</div>
+            </div>
+
+            <div class="builder-stat">
+              <strong>Cards covered</strong>
+              <div id="coveredCardCount" class="summary-total">0 / 0</div>
+            </div>
+
+            <div class="builder-stat">
+              <strong>Remaining</strong>
+              <div id="remainingCardCount" class="summary-total">0</div>
+            </div>
+
+            <div class="builder-stat">
+              <strong>Estimated cost</strong>
+              <div id="selectedSetsCost" class="summary-total">$0.00</div>
+            </div>
+          </div>
+
+          <div class="coverage-bar">
+            <div id="coverageBarFill" class="coverage-bar-fill"></div>
+          </div>
+
+          <div id="coveragePercent" class="coverage-percent">
+            0% covered
+          </div>
+
+          <div class="builder-columns">
+            <div class="builder-panel">
+              <h3>Selected Sets</h3>
+
+              <div id="selectedSetsList" class="selected-sets-list">
+                <p class="empty-message">
+                  No sets selected yet.
+                </p>
+              </div>
+            </div>
+
+            <div class="builder-panel">
+              <h3>Cards Still Needed</h3>
+
+              <div
+                id="remainingRecommendation"
+                class="next-recommendation hidden"
+              ></div>
+
+              <div
+                id="remainingCardsList"
+                class="remaining-cards-list"
+              ></div>
+            </div>
+          </div>
+        </section>
 
         <div id="unmatchedArea" class="error-list hidden">
           <h2>Cards Scryfall could not find</h2>
@@ -399,6 +641,6 @@ ManaBox lines such as these also work:
       </section>
     </main>
 
-    <script src="set-finder.js?v=1"></script>
+    <script src="set-finder.js?v=4"></script>
   </body>
 </html>
