@@ -2,13 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
 
     <title>MTG Set Finder</title>
 
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <link
+      rel="stylesheet"
+      href="styles.css?v=4"
+    />
 
     <style>
+      /* -------------------------------------------------------
+         Navigation
+         ------------------------------------------------------- */
+
       .nav-links {
         display: flex;
         align-items: center;
@@ -21,30 +32,44 @@
         color: var(--text);
       }
 
+
+      /* -------------------------------------------------------
+         Input / finder card
+         ------------------------------------------------------- */
+
       .finder-card {
         margin-top: 18px;
         padding: 18px 20px 20px;
+
         background: rgba(15, 23, 42, 0.9);
         border: 1px solid var(--border);
         border-radius: 16px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+
+        box-shadow:
+          0 10px 25px rgba(0, 0, 0, 0.28);
       }
 
       .finder-card > label {
         display: block;
+
         color: var(--muted);
+
         font-size: 0.9rem;
         font-weight: 600;
       }
 
       .finder-input {
         width: 100%;
-        min-height: 300px;
+        min-height: 280px;
+
         margin-top: 10px;
         padding: 12px 14px;
+
         resize: vertical;
+
         border: 1px solid var(--border);
         border-radius: 10px;
+
         background: var(--panel-alt);
         color: var(--text);
 
@@ -64,16 +89,25 @@
       }
 
       .finder-input:focus {
-        outline: 2px solid rgba(56, 189, 248, 0.35);
+        outline:
+          2px solid rgba(56, 189, 248, 0.35);
+
         outline-offset: 2px;
         border-color: var(--accent);
       }
+
+
+      /* -------------------------------------------------------
+         Options
+         ------------------------------------------------------- */
 
       .finder-options {
         display: flex;
         align-items: center;
         gap: 18px;
+
         flex-wrap: wrap;
+
         margin-top: 16px;
       }
 
@@ -81,7 +115,9 @@
         display: inline-flex;
         align-items: center;
         gap: 7px;
+
         color: var(--muted);
+
         font-size: 0.9rem;
         cursor: pointer;
       }
@@ -90,12 +126,154 @@
         accent-color: var(--accent);
       }
 
-      .finder-actions {
+      .control-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+
+        color: var(--muted);
+
+        font-size: 0.85rem;
+      }
+
+      .control-field select,
+      .control-field input {
+        padding: 8px 10px;
+
+        border-radius: 8px;
+        border: 1px solid var(--border);
+
+        background: var(--panel-alt);
+        color: var(--text);
+
+        font: inherit;
+      }
+
+
+      /* -------------------------------------------------------
+         Advanced filters
+         ------------------------------------------------------- */
+
+      .advanced-options {
+        margin-top: 16px;
+        padding: 12px;
+
+        border: 1px solid var(--border);
+        border-radius: 10px;
+
+        background:
+          rgba(15, 23, 42, 0.4);
+      }
+
+      .advanced-options summary {
+        color: var(--accent);
+        cursor: pointer;
+      }
+
+      .advanced-grid {
+        display: grid;
+
+        grid-template-columns:
+          repeat(
+            auto-fit,
+            minmax(190px, 1fr)
+          );
+
+        gap: 10px 18px;
+
+        margin-top: 14px;
+      }
+
+      .advanced-grid label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+
+        color: var(--muted);
+
+        font-size: 0.88rem;
+      }
+
+
+      /* -------------------------------------------------------
+         Buttons
+         ------------------------------------------------------- */
+
+      .finder-actions,
+      .bulk-actions,
+      .optimizer-actions,
+      .export-actions {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+      }
+
+      .finder-actions {
         margin-top: 16px;
       }
+
+      button.primary-button {
+        border-color:
+          rgba(56, 189, 248, 0.45);
+
+        background:
+          rgba(56, 189, 248, 0.15);
+      }
+
+      button.danger-button {
+        border-color:
+          rgba(248, 113, 113, 0.35);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+
+      /* -------------------------------------------------------
+         Bulk database
+         ------------------------------------------------------- */
+
+      .bulk-card {
+        margin-top: 18px;
+        padding: 16px 18px;
+
+        border: 1px solid var(--border);
+        border-radius: 16px;
+
+        background:
+          rgba(15, 23, 42, 0.75);
+      }
+
+      .bulk-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .bulk-header h2 {
+        margin: 0 0 5px;
+
+        font-size: 1rem;
+      }
+
+      .bulk-status {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .bulk-status strong {
+        color: var(--accent);
+      }
+
+
+      /* -------------------------------------------------------
+         Progress
+         ------------------------------------------------------- */
 
       .progress {
         margin-top: 18px;
@@ -104,8 +282,11 @@
       .progress-bar {
         width: 100%;
         height: 12px;
+
         margin-top: 8px;
+
         overflow: hidden;
+
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 999px;
@@ -114,16 +295,26 @@
       .progress-bar-fill {
         width: 0%;
         height: 100%;
+
         background: var(--accent);
+
         transition: width 0.2s ease;
       }
+
+
+      /* -------------------------------------------------------
+         Best set
+         ------------------------------------------------------- */
 
       .best-set {
         margin-bottom: 16px;
         padding: 14px;
+
         border: 1px solid var(--border);
         border-radius: 12px;
-        background: rgba(56, 189, 248, 0.08);
+
+        background:
+          rgba(56, 189, 248, 0.08);
       }
 
       .best-set > strong {
@@ -132,19 +323,83 @@
 
       .best-set-name {
         margin-top: 6px;
+
         color: var(--accent);
+
         font-size: 1.35rem;
         font-weight: 700;
       }
 
       .best-set-stats {
         margin-top: 8px;
+      }
+
+
+      /* -------------------------------------------------------
+         Ranking toolbar
+         ------------------------------------------------------- */
+
+      .ranking-controls {
+        display: grid;
+
+        grid-template-columns:
+          minmax(180px, 2fr)
+          repeat(
+            2,
+            minmax(120px, 1fr)
+          );
+
+        gap: 10px;
+
+        margin-bottom: 12px;
+      }
+
+      .ranking-controls input,
+      .ranking-controls select {
+        width: 100%;
+
+        padding: 9px 10px;
+
+        border: 1px solid var(--border);
+        border-radius: 8px;
+
+        background: var(--panel-alt);
         color: var(--text);
       }
 
-      .best-set-stats > div {
-        margin-top: 4px;
+      .ranking-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+
+        color: var(--muted);
+
+        font-size: 0.85rem;
       }
+
+
+      /* -------------------------------------------------------
+         Sortable table headers
+         ------------------------------------------------------- */
+
+      .sortable-header {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .sortable-header:hover {
+        color: var(--accent);
+      }
+
+      .sort-arrow {
+        margin-left: 4px;
+        color: var(--accent);
+      }
+
+
+      /* -------------------------------------------------------
+         Details/pricing
+         ------------------------------------------------------- */
 
       .card-details summary {
         color: var(--accent);
@@ -153,24 +408,32 @@
 
       .price-note {
         margin-top: 4px;
+
         color: var(--muted);
+
         font-size: 0.78rem;
       }
 
       .expensive-box {
         margin: 12px 0;
         padding: 12px;
-        border: 1px solid rgba(248, 113, 113, 0.35);
+
+        border:
+          1px solid rgba(
+            248,
+            113,
+            113,
+            0.35
+          );
+
         border-radius: 10px;
-        background: rgba(127, 29, 29, 0.22);
+
+        background:
+          rgba(127, 29, 29, 0.22);
       }
 
       .expensive-box strong {
         color: #fca5a5;
-      }
-
-      .expensive-box ul {
-        margin-bottom: 0;
       }
 
       .expensive-price {
@@ -180,7 +443,9 @@
 
       .inner-card-table {
         width: 100%;
+
         margin-top: 12px;
+
         border-collapse: collapse;
         background: transparent;
       }
@@ -188,7 +453,10 @@
       .inner-card-table th,
       .inner-card-table td {
         padding: 8px;
-        border-bottom: 1px solid var(--border);
+
+        border-bottom:
+          1px solid var(--border);
+
         background: transparent;
       }
 
@@ -201,40 +469,46 @@
         font-size: 0.88rem;
       }
 
-      .inner-card-table tr:hover td {
-        background: rgba(56, 189, 248, 0.06);
+
+      /* -------------------------------------------------------
+         Set selector
+         ------------------------------------------------------- */
+
+      .set-select {
+        width: 18px;
+        height: 18px;
+
+        accent-color: var(--accent);
+
+        cursor: pointer;
       }
 
-      .error-list {
-        margin-top: 18px;
-        padding: 14px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: rgba(248, 113, 113, 0.06);
-      }
 
-      .error-list h2 {
-        margin-top: 0;
-        font-size: 1rem;
-      }
+      /* -------------------------------------------------------
+         Deck builder
+         ------------------------------------------------------- */
 
       .deck-builder {
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
+        margin-top: 26px;
+        padding-top: 22px;
+
+        border-top:
+          1px solid var(--border);
       }
 
       .deck-builder-header {
         display: flex;
-        align-items: center;
         justify-content: space-between;
         gap: 16px;
+
+        align-items: center;
         flex-wrap: wrap;
+
         margin-bottom: 16px;
       }
 
       .deck-builder-header h2 {
-        margin: 0 0 4px;
+        margin: 0 0 5px;
       }
 
       .deck-builder-header p {
@@ -244,16 +518,26 @@
 
       .builder-summary {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+
+        grid-template-columns:
+          repeat(
+            auto-fit,
+            minmax(160px, 1fr)
+          );
+
         gap: 12px;
+
         margin-bottom: 14px;
       }
 
       .builder-stat {
         padding: 12px 14px;
+
         border: 1px solid var(--border);
         border-radius: 12px;
-        background: rgba(56, 189, 248, 0.08);
+
+        background:
+          rgba(56, 189, 248, 0.08);
       }
 
       .builder-stat strong {
@@ -264,7 +548,9 @@
       .coverage-bar {
         width: 100%;
         height: 18px;
+
         overflow: hidden;
+
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 999px;
@@ -273,27 +559,61 @@
       .coverage-bar-fill {
         width: 0%;
         height: 100%;
+
         background: var(--accent);
+
         transition: width 0.2s ease;
       }
 
       .coverage-percent {
         margin-top: 6px;
+
         color: var(--muted);
+
         font-size: 0.85rem;
         text-align: right;
       }
 
+      .optimizer-box {
+        margin-top: 18px;
+        padding: 14px;
+
+        border: 1px solid var(--border);
+        border-radius: 12px;
+
+        background:
+          rgba(15, 23, 42, 0.5);
+      }
+
+      .optimizer-box h3 {
+        margin: 0 0 4px;
+      }
+
+      .optimizer-box p {
+        margin: 0 0 12px;
+
+        color: var(--muted);
+
+        font-size: 0.85rem;
+      }
+
       .builder-columns {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+
+        grid-template-columns:
+          1fr 1fr;
+
         gap: 16px;
+
         margin-top: 18px;
       }
 
       .builder-panel {
         padding: 16px;
-        background: rgba(15, 23, 42, 0.55);
+
+        background:
+          rgba(15, 23, 42, 0.55);
+
         border: 1px solid var(--border);
         border-radius: 12px;
       }
@@ -304,7 +624,9 @@
 
       .selected-set-item {
         padding: 12px 0;
-        border-bottom: 1px solid var(--border);
+
+        border-bottom:
+          1px solid var(--border);
       }
 
       .selected-set-item:last-child {
@@ -315,6 +637,7 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
+
         align-items: center;
       }
 
@@ -324,17 +647,15 @@
 
       .selected-set-meta {
         margin-top: 4px;
+
         color: var(--muted);
+
         font-size: 0.85rem;
       }
 
       .new-card-count {
         color: var(--accent);
-        font-weight: 600;
-      }
-
-      .duplicate-count {
-        color: var(--muted);
+        font-weight: 700;
       }
 
       .remaining-cards-list {
@@ -346,57 +667,77 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        padding: 7px 0;
-        border-bottom: 1px solid var(--border);
-      }
 
-      .remaining-card:last-child {
-        border-bottom: none;
+        padding: 7px 0;
+
+        border-bottom:
+          1px solid var(--border);
       }
 
       .next-recommendation {
         margin-bottom: 14px;
         padding: 12px;
-        background: rgba(56, 189, 248, 0.08);
-        border: 1px solid rgba(56, 189, 248, 0.25);
+
+        background:
+          rgba(56, 189, 248, 0.08);
+
+        border:
+          1px solid rgba(
+            56,
+            189,
+            248,
+            0.25
+          );
+
         border-radius: 10px;
       }
 
-      .next-recommendation strong {
-        color: var(--accent);
-      }
+      .complete-message {
+        padding: 16px;
 
-      .set-select {
-        width: 18px;
-        height: 18px;
-        accent-color: var(--accent);
-        cursor: pointer;
+        text-align: center;
+
+        color: var(--accent);
+
+        border:
+          1px solid rgba(
+            56,
+            189,
+            248,
+            0.3
+          );
+
+        border-radius: 10px;
+
+        background:
+          rgba(56, 189, 248, 0.08);
       }
 
       .empty-message {
         color: var(--muted);
       }
 
-      .complete-message {
-        padding: 16px;
-        text-align: center;
-        color: var(--accent);
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        border-radius: 10px;
-        background: rgba(56, 189, 248, 0.08);
-      }
 
-      /*
-       * Final assignment
-       */
+      /* -------------------------------------------------------
+         Final assignment
+         ------------------------------------------------------- */
 
       .final-summary {
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid var(--border);
+        margin-top: 28px;
+        padding-top: 22px;
+
+        border-top:
+          1px solid var(--border);
       }
 
       .final-summary-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+
+        align-items: center;
+        flex-wrap: wrap;
+
         margin-bottom: 14px;
       }
 
@@ -411,16 +752,26 @@
 
       .assignment-summary {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+
+        grid-template-columns:
+          repeat(
+            auto-fit,
+            minmax(190px, 1fr)
+          );
+
         gap: 12px;
+
         margin-bottom: 18px;
       }
 
       .assignment-set-card {
         padding: 12px 14px;
+
         border: 1px solid var(--border);
         border-radius: 12px;
-        background: rgba(56, 189, 248, 0.06);
+
+        background:
+          rgba(56, 189, 248, 0.06);
       }
 
       .assignment-set-name {
@@ -429,21 +780,108 @@
 
       .assignment-set-meta {
         margin-top: 5px;
+
         color: var(--muted);
+
         font-size: 0.85rem;
-      }
-
-      .final-assignment-table .uncovered-row td {
-        background: rgba(248, 113, 113, 0.06);
-      }
-
-      .assignment-uncovered {
-        color: #fca5a5;
-        font-weight: 600;
       }
 
       .assignment-covered {
         color: var(--accent);
+      }
+
+      .assignment-uncovered {
+        color: #fca5a5;
+        font-weight: 700;
+      }
+
+      .uncovered-row td {
+        background:
+          rgba(248, 113, 113, 0.06);
+      }
+
+      .assignment-select {
+        min-width: 170px;
+
+        padding: 6px 8px;
+
+        border: 1px solid var(--border);
+        border-radius: 7px;
+
+        background: var(--panel-alt);
+        color: var(--text);
+      }
+
+
+      /* -------------------------------------------------------
+         Image preview
+         ------------------------------------------------------- */
+
+      .card-preview-link {
+        cursor: zoom-in;
+      }
+
+      #setFinderImagePreview {
+        position: fixed;
+        z-index: 2000;
+
+        display: none;
+
+        width: 244px;
+
+        padding: 8px;
+
+        border-radius: 13px;
+
+        background:
+          rgba(15, 23, 42, 0.98);
+
+        border: 1px solid var(--border);
+
+        box-shadow:
+          0 20px 45px rgba(0, 0, 0, 0.5);
+
+        pointer-events: none;
+      }
+
+      #setFinderImagePreview.visible {
+        display: block;
+      }
+
+      #setFinderImagePreview img {
+        display: block;
+
+        width: 100%;
+        height: auto;
+
+        border-radius: 9px;
+      }
+
+
+      /* -------------------------------------------------------
+         Error
+         ------------------------------------------------------- */
+
+      .error-list {
+        margin-top: 18px;
+        padding: 14px;
+
+        border: 1px solid var(--border);
+        border-radius: 12px;
+
+        background:
+          rgba(248, 113, 113, 0.06);
+      }
+
+
+      /* -------------------------------------------------------
+         Responsive
+         ------------------------------------------------------- */
+
+      @media (max-width: 900px) {
+        .ranking-controls {
+          grid-template-columns: 1fr 1fr;
+        }
       }
 
       @media (max-width: 780px) {
@@ -452,7 +890,7 @@
         }
 
         .finder-input {
-          min-height: 240px;
+          min-height: 230px;
         }
 
         .finder-options {
@@ -461,14 +899,15 @@
           gap: 10px;
         }
 
-        .inner-card-table {
-          min-width: 600px;
-        }
-
         .builder-columns {
           grid-template-columns: 1fr;
         }
 
+        .ranking-controls {
+          grid-template-columns: 1fr;
+        }
+
+        .inner-card-table,
         .final-assignment-table {
           min-width: 800px;
         }
@@ -479,29 +918,100 @@
   <body>
     <main class="page-shell">
       <nav class="nav-links">
-        <a href="index.html">Secret Lair Summary</a>
-        <strong>Set Finder</strong>
+        <a href="index.html">
+          Secret Lair Summary
+        </a>
+
+        <strong>
+          Set Finder
+        </strong>
       </nav>
 
       <header class="page-header">
         <div>
-          <h1>MTG Set Finder</h1>
+          <h1>
+            MTG Set Finder
+          </h1>
+
           <p>
-            Paste a ManaBox list, compare available printings, select sets,
-            and build a complete card assignment for the deck.
+            Compare printings, optimize set coverage,
+            and build a complete sourcing plan.
           </p>
         </div>
       </header>
 
+
+      <!-- ===================================================
+           LOCAL SCRYFALL DATABASE
+           =================================================== -->
+
+      <section class="bulk-card">
+        <div class="bulk-header">
+          <div>
+            <h2>
+              Local Scryfall Database
+            </h2>
+
+            <div
+              id="bulkStatus"
+              class="bulk-status"
+            >
+              Checking local database…
+            </div>
+          </div>
+
+          <div class="bulk-actions">
+            <button
+              id="refreshBulkButton"
+              type="button"
+            >
+              Download / Refresh Scryfall Data
+            </button>
+
+            <button
+              id="deleteBulkButton"
+              type="button"
+              class="danger-button"
+            >
+              Delete Local Database
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="bulkProgressArea"
+          class="progress hidden"
+        >
+          <div
+            id="bulkProgressMessage"
+            class="status-message"
+          >
+            Preparing…
+          </div>
+
+          <div class="progress-bar">
+            <div
+              id="bulkProgressBar"
+              class="progress-bar-fill"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ===================================================
+           DECK INPUT
+           =================================================== -->
+
       <section class="finder-card">
         <label for="cardInput">
-          ManaBox card list
+          ManaBox / deck list
         </label>
 
         <textarea
           id="cardInput"
           class="finder-input"
-          placeholder="Paste your list here...
+          placeholder="Example:
 
 1 Sol Ring
 1 Counterspell
@@ -515,87 +1025,377 @@ ManaBox-style lines also work:
 1 Counterspell (DMR) 45"
         ></textarea>
 
+
         <div class="finder-options">
+          <label class="control-field">
+            Finish preference
+
+            <select id="finishPreference">
+              <option value="normal">
+                Normal preferred
+              </option>
+
+              <option value="cheapest">
+                Cheapest finish
+              </option>
+
+              <option value="foil">
+                Foil preferred
+              </option>
+
+              <option value="etched">
+                Etched preferred
+              </option>
+            </select>
+          </label>
+
           <label>
-            <input id="paperOnly" type="checkbox" checked />
+            <input
+              id="paperOnly"
+              type="checkbox"
+              checked
+            />
+
             Paper printings only
           </label>
 
           <label>
-            <input id="excludeSecretLair" type="checkbox" checked />
+            <input
+              id="excludeSecretLair"
+              type="checkbox"
+              checked
+            />
+
             Exclude Secret Lair
           </label>
 
           <label>
-            <input id="excludePromos" type="checkbox" checked />
+            <input
+              id="excludePromos"
+              type="checkbox"
+              checked
+            />
+
             Exclude promo printings
           </label>
         </div>
 
+
+        <details class="advanced-options">
+          <summary>
+            Additional set filters
+          </summary>
+
+          <div class="advanced-grid">
+            <label>
+              <input
+                id="excludeFunny"
+                type="checkbox"
+                checked
+              />
+
+              Exclude funny / Un-sets
+            </label>
+
+            <label>
+              <input
+                id="excludeMemorabilia"
+                type="checkbox"
+                checked
+              />
+
+              Exclude memorabilia
+            </label>
+
+            <label>
+              <input
+                id="excludeTokens"
+                type="checkbox"
+                checked
+              />
+
+              Exclude token sets
+            </label>
+
+            <label>
+              <input
+                id="excludeMinigames"
+                type="checkbox"
+                checked
+              />
+
+              Exclude minigames
+            </label>
+
+            <label>
+              <input
+                id="excludeBox"
+                type="checkbox"
+              />
+
+              Exclude box / gift sets
+            </label>
+
+            <label>
+              <input
+                id="excludeAlchemy"
+                type="checkbox"
+                checked
+              />
+
+              Exclude Alchemy sets
+            </label>
+
+            <label>
+              <input
+                id="excludeDigital"
+                type="checkbox"
+                checked
+              />
+
+              Exclude digital-only cards
+            </label>
+          </div>
+        </details>
+
+
         <div class="finder-actions">
-          <button id="analyzeButton" type="button">
-            Find Best Sets
+          <button
+            id="analyzeButton"
+            type="button"
+            class="primary-button"
+          >
+            Analyze Deck
           </button>
 
-          <button id="clearButton" type="button">
-            Clear
+          <button
+            id="clearButton"
+            type="button"
+          >
+            Clear Deck
           </button>
         </div>
 
-        <div id="progressArea" class="progress hidden">
-          <div id="statusMessage" class="status-message">
-            Waiting...
+
+        <div
+          id="progressArea"
+          class="progress hidden"
+        >
+          <div
+            id="statusMessage"
+            class="status-message"
+          >
+            Waiting…
           </div>
 
           <div class="progress-bar">
-            <div id="progressBarFill" class="progress-bar-fill"></div>
+            <div
+              id="progressBarFill"
+              class="progress-bar-fill"
+            ></div>
           </div>
         </div>
       </section>
 
-      <section id="resultsSection" class="results-card hidden">
-        <div id="bestSet" class="best-set hidden">
-          <strong>Best matching set</strong>
-          <div id="bestSetName" class="best-set-name"></div>
-          <div id="bestSetStats" class="best-set-stats"></div>
+
+      <!-- ===================================================
+           RESULTS
+           =================================================== -->
+
+      <section
+        id="resultsSection"
+        class="results-card hidden"
+      >
+
+        <div
+          id="bestSet"
+          class="best-set hidden"
+        >
+          <strong>
+            Best matching set
+          </strong>
+
+          <div
+            id="bestSetName"
+            class="best-set-name"
+          ></div>
+
+          <div
+            id="bestSetStats"
+            class="best-set-stats"
+          ></div>
         </div>
+
 
         <div class="summary-row">
           <div class="summary-stat">
-            <strong>Cards searched</strong>
-            <div id="cardCount" class="summary-total">0</div>
+            <strong>
+              Unique cards
+            </strong>
+
+            <div
+              id="cardCount"
+              class="summary-total"
+            >
+              0
+            </div>
           </div>
 
           <div class="summary-stat">
-            <strong>Sets found</strong>
-            <div id="setCount" class="summary-total">0</div>
+            <strong>
+              Total copies
+            </strong>
+
+            <div
+              id="copyCount"
+              class="summary-total"
+            >
+              0
+            </div>
           </div>
 
           <div class="summary-stat">
-            <strong>Unmatched cards</strong>
-            <div id="unmatchedCount" class="summary-total">0</div>
+            <strong>
+              Sets found
+            </strong>
+
+            <div
+              id="setCount"
+              class="summary-total"
+            >
+              0
+            </div>
+          </div>
+
+          <div class="summary-stat">
+            <strong>
+              Unmatched
+            </strong>
+
+            <div
+              id="unmatchedCount"
+              class="summary-total"
+            >
+              0
+            </div>
           </div>
         </div>
+
+
+        <!-- Ranking filters -->
+
+        <div class="ranking-controls">
+          <input
+            id="setFilter"
+            type="search"
+            placeholder="Filter set name or code…"
+          />
+
+          <select id="setTypeFilter">
+            <option value="">
+              All set types
+            </option>
+          </select>
+
+          <input
+            id="minimumCoverage"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            placeholder="Min coverage %"
+          />
+
+          <label class="ranking-checkbox">
+            <input
+              id="selectedOnlyFilter"
+              type="checkbox"
+            />
+
+            Selected sets only
+          </label>
+        </div>
+
 
         <div class="table-toolbar">
-          <div>
-            <strong>Set rankings</strong>
-          </div>
+          <strong>
+            Set Rankings
+          </strong>
+
+          <span
+            id="visibleSetCount"
+            class="price-note"
+          ></span>
         </div>
+
 
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Select</th>
-                <th>Rank</th>
-                <th>Set</th>
-                <th>Code</th>
-                <th>Cards</th>
-                <th>New Cards</th>
-                <th>Coverage</th>
-                <th>Estimated Cost</th>
-                <th>Cards / Prices</th>
+                <th>
+                  Select
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="rank"
+                >
+                  Rank
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="name"
+                >
+                  Set
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="code"
+                >
+                  Code
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="count"
+                >
+                  Cards
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="newCards"
+                >
+                  New Cards
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="coverage"
+                >
+                  Coverage
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th
+                  class="sortable-header"
+                  data-sort="totalCost"
+                >
+                  Est. Cost
+                  <span class="sort-arrow"></span>
+                </th>
+
+                <th>
+                  Cards / Prices
+                </th>
               </tr>
             </thead>
 
@@ -603,54 +1403,148 @@ ManaBox-style lines also work:
           </table>
         </div>
 
+
+        <!-- =================================================
+             DECK BUILDER
+             ================================================= -->
+
         <section class="deck-builder">
           <div class="deck-builder-header">
             <div>
-              <h2>Selected Set Plan</h2>
+              <h2>
+                Selected Set Plan
+              </h2>
+
               <p>
-                Sets are prioritized in the order you select them. The first
-                selected set containing a card becomes that card's assigned set.
+                Sets are prioritized in the order
+                you select them unless you manually
+                assign a card below.
               </p>
             </div>
 
-            <button id="clearSetsButton" type="button">
+            <button
+              id="clearSetsButton"
+              type="button"
+            >
               Clear Selected Sets
             </button>
           </div>
 
+
           <div class="builder-summary">
             <div class="builder-stat">
-              <strong>Selected sets</strong>
-              <div id="selectedSetCount" class="summary-total">0</div>
+              <strong>
+                Selected sets
+              </strong>
+
+              <div
+                id="selectedSetCount"
+                class="summary-total"
+              >
+                0
+              </div>
             </div>
 
             <div class="builder-stat">
-              <strong>Cards covered</strong>
-              <div id="coveredCardCount" class="summary-total">0 / 0</div>
+              <strong>
+                Unique cards covered
+              </strong>
+
+              <div
+                id="coveredCardCount"
+                class="summary-total"
+              >
+                0 / 0
+              </div>
             </div>
 
             <div class="builder-stat">
-              <strong>Remaining</strong>
-              <div id="remainingCardCount" class="summary-total">0</div>
+              <strong>
+                Remaining
+              </strong>
+
+              <div
+                id="remainingCardCount"
+                class="summary-total"
+              >
+                0
+              </div>
             </div>
 
             <div class="builder-stat">
-              <strong>Estimated assigned cost</strong>
-              <div id="selectedSetsCost" class="summary-total">$0.00</div>
+              <strong>
+                Estimated assigned cost
+              </strong>
+
+              <div
+                id="selectedSetsCost"
+                class="summary-total"
+              >
+                $0.00
+              </div>
             </div>
           </div>
+
 
           <div class="coverage-bar">
-            <div id="coverageBarFill" class="coverage-bar-fill"></div>
+            <div
+              id="coverageBarFill"
+              class="coverage-bar-fill"
+            ></div>
           </div>
 
-          <div id="coveragePercent" class="coverage-percent">
+          <div
+            id="coveragePercent"
+            class="coverage-percent"
+          >
             0% covered
           </div>
 
+
+          <!-- Optimizers -->
+
+          <div class="optimizer-box">
+            <h3>
+              Automatic Plan Builder
+            </h3>
+
+            <p>
+              Optimization uses your currently
+              allowed sets and printings.
+              "Fewest sets" and "best value"
+              use greedy set-cover heuristics.
+            </p>
+
+            <div class="optimizer-actions">
+              <button
+                id="optimizeFewestButton"
+                type="button"
+              >
+                Minimize Sets
+              </button>
+
+              <button
+                id="optimizeCostButton"
+                type="button"
+              >
+                Lowest Card Cost
+              </button>
+
+              <button
+                id="optimizeValueButton"
+                type="button"
+              >
+                Best Cost / New Card
+              </button>
+            </div>
+          </div>
+
+
           <div class="builder-columns">
             <div class="builder-panel">
-              <h3>Selected Sets</h3>
+              <h3>
+                Selected Sets
+              </h3>
 
               <div id="selectedSetsList">
                 <p class="empty-message">
@@ -660,7 +1554,9 @@ ManaBox-style lines also work:
             </div>
 
             <div class="builder-panel">
-              <h3>Cards Still Needed</h3>
+              <h3>
+                Cards Still Needed
+              </h3>
 
               <div
                 id="remainingRecommendation"
@@ -675,32 +1571,91 @@ ManaBox-style lines also work:
           </div>
         </section>
 
+
+        <!-- =================================================
+             FINAL ASSIGNMENT
+             ================================================= -->
+
         <section class="final-summary">
           <div class="final-summary-header">
-            <h2>Final Card Assignment</h2>
-            <p>
-              This is the final breakdown of which selected set each card is
-              being sourced from.
-            </p>
+            <div>
+              <h2>
+                Final Card Assignment
+              </h2>
+
+              <p>
+                Choose a different selected set
+                for any individual card if desired.
+              </p>
+            </div>
+
+            <div class="export-actions">
+              <button
+                id="exportCsvButton"
+                type="button"
+              >
+                Export CSV
+              </button>
+
+              <button
+                id="exportTextButton"
+                type="button"
+              >
+                Export Text
+              </button>
+            </div>
           </div>
+
 
           <div
             id="assignmentSetSummary"
             class="assignment-summary"
           ></div>
 
+
           <div class="table-wrap">
             <table class="final-assignment-table">
               <thead>
                 <tr>
-                  <th>Card</th>
-                  <th>Status</th>
-                  <th>Assigned Set</th>
-                  <th>Code</th>
-                  <th>Price</th>
-                  <th>Finish</th>
-                  <th>Rarity</th>
-                  <th>Collector #</th>
+                  <th>
+                    Qty
+                  </th>
+
+                  <th>
+                    Card
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+
+                  <th>
+                    Assigned Set
+                  </th>
+
+                  <th>
+                    Code
+                  </th>
+
+                  <th>
+                    Price Each
+                  </th>
+
+                  <th>
+                    Line Total
+                  </th>
+
+                  <th>
+                    Finish
+                  </th>
+
+                  <th>
+                    Rarity
+                  </th>
+
+                  <th>
+                    Collector #
+                  </th>
                 </tr>
               </thead>
 
@@ -709,13 +1664,33 @@ ManaBox-style lines also work:
           </div>
         </section>
 
-        <div id="unmatchedArea" class="error-list hidden">
-          <h2>Cards Scryfall could not find</h2>
+
+        <!-- Unmatched -->
+
+        <div
+          id="unmatchedArea"
+          class="error-list hidden"
+        >
+          <h2>
+            Cards not found in local Scryfall data
+          </h2>
+
           <ul id="unmatchedCards"></ul>
         </div>
       </section>
     </main>
 
-    <script src="set-finder.js?v=5"></script>
+
+    <!-- Image hover preview -->
+
+    <div id="setFinderImagePreview">
+      <img
+        id="setFinderPreviewImage"
+        alt=""
+      />
+    </div>
+
+
+    <script src="set-finder.js?v=10"></script>
   </body>
 </html>

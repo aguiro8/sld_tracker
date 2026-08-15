@@ -1,3 +1,12 @@
+/* ============================================================
+   MTG SET FINDER
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   DOM
+   ------------------------------------------------------------ */
+
 const cardInput =
   document.getElementById("cardInput");
 
@@ -6,6 +15,9 @@ const analyzeButton =
 
 const clearButton =
   document.getElementById("clearButton");
+
+const finishPreference =
+  document.getElementById("finishPreference");
 
 const paperOnlyCheckbox =
   document.getElementById("paperOnly");
@@ -16,6 +28,28 @@ const excludeSecretLairCheckbox =
 const excludePromosCheckbox =
   document.getElementById("excludePromos");
 
+const excludeFunnyCheckbox =
+  document.getElementById("excludeFunny");
+
+const excludeMemorabiliaCheckbox =
+  document.getElementById("excludeMemorabilia");
+
+const excludeTokensCheckbox =
+  document.getElementById("excludeTokens");
+
+const excludeMinigamesCheckbox =
+  document.getElementById("excludeMinigames");
+
+const excludeBoxCheckbox =
+  document.getElementById("excludeBox");
+
+const excludeAlchemyCheckbox =
+  document.getElementById("excludeAlchemy");
+
+const excludeDigitalCheckbox =
+  document.getElementById("excludeDigital");
+
+
 const progressArea =
   document.getElementById("progressArea");
 
@@ -25,20 +59,26 @@ const progressBarFill =
 const statusMessage =
   document.getElementById("statusMessage");
 
+
 const resultsSection =
   document.getElementById("resultsSection");
 
 const setResults =
   document.getElementById("setResults");
 
+
 const cardCount =
   document.getElementById("cardCount");
+
+const copyCount =
+  document.getElementById("copyCount");
 
 const setCount =
   document.getElementById("setCount");
 
 const unmatchedCount =
   document.getElementById("unmatchedCount");
+
 
 const bestSet =
   document.getElementById("bestSet");
@@ -49,11 +89,13 @@ const bestSetName =
 const bestSetStats =
   document.getElementById("bestSetStats");
 
+
 const unmatchedArea =
   document.getElementById("unmatchedArea");
 
 const unmatchedCardsList =
   document.getElementById("unmatchedCards");
+
 
 const clearSetsButton =
   document.getElementById("clearSetsButton");
@@ -85,281 +127,1588 @@ const remainingCardsList =
 const remainingRecommendation =
   document.getElementById("remainingRecommendation");
 
+
+const optimizeFewestButton =
+  document.getElementById("optimizeFewestButton");
+
+const optimizeCostButton =
+  document.getElementById("optimizeCostButton");
+
+const optimizeValueButton =
+  document.getElementById("optimizeValueButton");
+
+
 const assignmentSetSummary =
   document.getElementById("assignmentSetSummary");
 
 const assignmentTableBody =
   document.getElementById("assignmentTableBody");
 
+const exportCsvButton =
+  document.getElementById("exportCsvButton");
 
-const SCRYFALL_DELAY_MS = 550;
-const EXPENSIVE_THRESHOLD = 25;
+const exportTextButton =
+  document.getElementById("exportTextButton");
 
+
+const setFilter =
+  document.getElementById("setFilter");
+
+const setTypeFilter =
+  document.getElementById("setTypeFilter");
+
+const minimumCoverage =
+  document.getElementById("minimumCoverage");
+
+const selectedOnlyFilter =
+  document.getElementById("selectedOnlyFilter");
+
+const visibleSetCount =
+  document.getElementById("visibleSetCount");
+
+
+const refreshBulkButton =
+  document.getElementById("refreshBulkButton");
+
+const deleteBulkButton =
+  document.getElementById("deleteBulkButton");
+
+const bulkStatus =
+  document.getElementById("bulkStatus");
+
+const bulkProgressArea =
+  document.getElementById("bulkProgressArea");
+
+const bulkProgressMessage =
+  document.getElementById("bulkProgressMessage");
+
+const bulkProgressBar =
+  document.getElementById("bulkProgressBar");
+
+
+const imagePreview =
+  document.getElementById("setFinderImagePreview");
+
+const previewImage =
+  document.getElementById("setFinderPreviewImage");
+
+
+/* ------------------------------------------------------------
+   Constants
+   ------------------------------------------------------------ */
+
+const DB_NAME =
+  "mtg-set-finder";
+
+const DB_VERSION =
+  3;
+
+const CARD_STORE =
+  "cards";
+
+const META_STORE =
+  "meta";
+
+const CACHE_META_KEY =
+  "activeBulkCache";
+
+const STATE_KEY =
+  "mtg-set-finder-state-v3";
+
+const EXPENSIVE_THRESHOLD =
+  25;
+
+const API_DELAY_MS =
+  550;
+
+const BULK_BATCH_SIZE =
+  750;
+
+
+/* ------------------------------------------------------------
+   Runtime state
+   ------------------------------------------------------------ */
+
+let dbPromise = null;
 
 let isRunning = false;
+let isImportingBulk = false;
+
+let currentDeck = [];
+let currentCardNames = [];
+let currentQuantityMap =
+  new Map();
 
 let currentRankedSets = [];
-let currentCardNames = [];
 let currentUnmatchedCards = [];
 
-/*
- * Set keeps fast membership lookup.
- */
 const selectedSetCodes =
   new Set();
 
-/*
- * Array preserves the exact order in which
- * the user selected the sets.
- */
 let selectedSetOrder = [];
 
+/*
+ * card name -> manually selected set code
+ */
+const manualAssignments =
+  new Map();
 
 /*
- * ------------------------------------------------------------
- * Events
- * ------------------------------------------------------------
+ * Sort state for ranking table.
  */
+let rankingSort = {
+  key: "count",
+  direction: "desc"
+};
 
-analyzeButton.addEventListener(
-  "click",
-  analyzeCards
-);
 
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
 
-clearButton.addEventListener(
-  "click",
-  () => {
-    if (isRunning) {
-      return;
-    }
-
-    cardInput.value = "";
-
-    currentRankedSets = [];
-    currentCardNames = [];
-    currentUnmatchedCards = [];
-
-    selectedSetCodes.clear();
-    selectedSetOrder = [];
-
-    setResults.innerHTML = "";
-    assignmentTableBody.innerHTML = "";
-    assignmentSetSummary.innerHTML = "";
-
-    resultsSection.classList.add(
-      "hidden"
-    );
-
-    progressArea.classList.add(
-      "hidden"
-    );
-
-    bestSet.classList.add(
-      "hidden"
-    );
-
-    unmatchedArea.classList.add(
-      "hidden"
-    );
-
-    cardCount.textContent = "0";
-    setCount.textContent = "0";
-    unmatchedCount.textContent = "0";
-
-    progressBarFill.style.width =
-      "0%";
-
-    statusMessage.textContent =
-      "Waiting...";
-
-    updateDeckBuilder();
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+    restoreSavedState();
+    installEventHandlers();
+    installImagePreviewHandlers();
+    await updateBulkStatus();
   }
 );
 
 
-clearSetsButton.addEventListener(
-  "click",
-  () => {
-    selectedSetCodes.clear();
-    selectedSetOrder = [];
+/* ============================================================
+   EVENT HANDLERS
+   ============================================================ */
 
-    document
-      .querySelectorAll(".set-select")
-      .forEach(
-        checkbox => {
-          checkbox.checked = false;
+function installEventHandlers() {
+  analyzeButton.addEventListener(
+    "click",
+    analyzeCards
+  );
+
+  clearButton.addEventListener(
+    "click",
+    clearDeck
+  );
+
+  clearSetsButton.addEventListener(
+    "click",
+    clearSelectedSets
+  );
+
+  refreshBulkButton.addEventListener(
+    "click",
+    () => refreshBulkDatabase()
+  );
+
+  deleteBulkButton.addEventListener(
+    "click",
+    deleteBulkDatabase
+  );
+
+  optimizeFewestButton.addEventListener(
+    "click",
+    optimizeFewestSets
+  );
+
+  optimizeCostButton.addEventListener(
+    "click",
+    optimizeLowestCardCost
+  );
+
+  optimizeValueButton.addEventListener(
+    "click",
+    optimizeBestValue
+  );
+
+  exportCsvButton.addEventListener(
+    "click",
+    exportCsv
+  );
+
+  exportTextButton.addEventListener(
+    "click",
+    exportText
+  );
+
+
+  /*
+   * Ranking filters.
+   */
+  setFilter.addEventListener(
+    "input",
+    renderSetTable
+  );
+
+  setTypeFilter.addEventListener(
+    "change",
+    renderSetTable
+  );
+
+  minimumCoverage.addEventListener(
+    "input",
+    renderSetTable
+  );
+
+  selectedOnlyFilter.addEventListener(
+    "change",
+    renderSetTable
+  );
+
+
+  /*
+   * Sortable headers.
+   */
+  document
+    .querySelectorAll(
+      ".sortable-header"
+    )
+    .forEach(header => {
+      header.addEventListener(
+        "click",
+        () => {
+          const key =
+            header.dataset.sort;
+
+          if (
+            rankingSort.key === key
+          ) {
+            rankingSort.direction =
+              rankingSort.direction ===
+              "asc"
+                ? "desc"
+                : "asc";
+          } else {
+            rankingSort.key =
+              key;
+
+            rankingSort.direction =
+              defaultSortDirection(
+                key
+              );
+          }
+
+          renderSetTable();
         }
       );
-
-    updateDeckBuilder();
-  }
-);
+    });
 
 
-/*
- * ------------------------------------------------------------
- * Main analysis
- * ------------------------------------------------------------
- */
-
-async function analyzeCards() {
-  if (isRunning) {
-    return;
-  }
-
-  const cardNames =
-    parseManaBoxList(
-      cardInput.value
-    );
-
-  if (cardNames.length === 0) {
-    alert(
-      "No card names were found in the list."
-    );
-
-    return;
-  }
-
-  currentCardNames =
-    cardNames;
-
-  currentRankedSets = [];
-  currentUnmatchedCards = [];
-
-  selectedSetCodes.clear();
-  selectedSetOrder = [];
-
-  isRunning = true;
-
-  analyzeButton.disabled = true;
-  clearButton.disabled = true;
-
-  analyzeButton.textContent =
-    "Searching...";
-
-  resetResults();
-
-  progressArea.classList.remove(
-    "hidden"
+  /*
+   * Persist deck text.
+   */
+  cardInput.addEventListener(
+    "input",
+    debounce(
+      saveState,
+      250
+    )
   );
 
-  resultsSection.classList.remove(
-    "hidden"
-  );
 
-  cardCount.textContent =
-    cardNames.length;
+  /*
+   * Settings that affect analysis.
+   */
+  [
+    finishPreference,
+    paperOnlyCheckbox,
+    excludeSecretLairCheckbox,
+    excludePromosCheckbox,
+    excludeFunnyCheckbox,
+    excludeMemorabiliaCheckbox,
+    excludeTokensCheckbox,
+    excludeMinigamesCheckbox,
+    excludeBoxCheckbox,
+    excludeAlchemyCheckbox,
+    excludeDigitalCheckbox
+  ].forEach(control => {
+    control.addEventListener(
+      "change",
+      saveState
+    );
+  });
+}
 
-  const sets =
-    new Map();
 
-  const unmatchedCards = [];
+/* ============================================================
+   SAVED STATE
+   ============================================================ */
+
+function saveState() {
+  const data = {
+    deckText:
+      cardInput.value,
+
+    finishPreference:
+      finishPreference.value,
+
+    filters: {
+      paperOnly:
+        paperOnlyCheckbox.checked,
+
+      excludeSecretLair:
+        excludeSecretLairCheckbox.checked,
+
+      excludePromos:
+        excludePromosCheckbox.checked,
+
+      excludeFunny:
+        excludeFunnyCheckbox.checked,
+
+      excludeMemorabilia:
+        excludeMemorabiliaCheckbox.checked,
+
+      excludeTokens:
+        excludeTokensCheckbox.checked,
+
+      excludeMinigames:
+        excludeMinigamesCheckbox.checked,
+
+      excludeBox:
+        excludeBoxCheckbox.checked,
+
+      excludeAlchemy:
+        excludeAlchemyCheckbox.checked,
+
+      excludeDigital:
+        excludeDigitalCheckbox.checked
+    },
+
+    selectedSetOrder:
+      [...selectedSetOrder],
+
+    manualAssignments:
+      Object.fromEntries(
+        manualAssignments.entries()
+      )
+  };
 
   try {
-    for (
-      let index = 0;
-      index < cardNames.length;
-      index++
-    ) {
-      const cardName =
-        cardNames[index];
-
-      updateProgress(
-        index,
-        cardNames.length,
-        `Searching ${index + 1} of ${cardNames.length}: ${cardName}`
-      );
-
-      try {
-        const printings =
-          await getPrintings(
-            cardName
-          );
-
-        if (
-          printings.length === 0
-        ) {
-          unmatchedCards.push(
-            cardName
-          );
-        } else {
-          addPrintingsToSets(
-            sets,
-            cardName,
-            printings
-          );
-        }
-      } catch (error) {
-        console.error(
-          `Could not look up "${cardName}":`,
-          error
-        );
-
-        unmatchedCards.push(
-          cardName
-        );
-      }
-
-      if (
-        index <
-        cardNames.length - 1
-      ) {
-        await delay(
-          SCRYFALL_DELAY_MS
-        );
-      }
-    }
-
-    const rankedSets =
-      rankSets(
-        sets,
-        cardNames.length
-      );
-
-    currentRankedSets =
-      rankedSets;
-
-    currentUnmatchedCards =
-      unmatchedCards;
-
-    renderResults(
-      rankedSets,
-      cardNames.length,
-      unmatchedCards
-    );
-
-    updateProgress(
-      cardNames.length,
-      cardNames.length,
-      "Done."
+    localStorage.setItem(
+      STATE_KEY,
+      JSON.stringify(data)
     );
   } catch (error) {
-    console.error(error);
-
-    statusMessage.textContent =
-      `Something went wrong: ${error.message}`;
-  } finally {
-    isRunning = false;
-
-    analyzeButton.disabled = false;
-    clearButton.disabled = false;
-
-    analyzeButton.textContent =
-      "Find Best Sets";
+    console.warn(
+      "Unable to save app state.",
+      error
+    );
   }
 }
 
 
-/*
- * ------------------------------------------------------------
- * Parse ManaBox list
- * ------------------------------------------------------------
- */
+function restoreSavedState() {
+  let data = null;
 
-function parseManaBoxList(text) {
-  const names =
-    new Set();
+  try {
+    const raw =
+      localStorage.getItem(
+        STATE_KEY
+      );
+
+    if (raw) {
+      data =
+        JSON.parse(raw);
+    }
+  } catch (error) {
+    console.warn(
+      "Unable to restore app state.",
+      error
+    );
+  }
+
+  if (!data) {
+    return;
+  }
+
+  if (
+    typeof data.deckText ===
+    "string"
+  ) {
+    cardInput.value =
+      data.deckText;
+  }
+
+  if (
+    data.finishPreference
+  ) {
+    finishPreference.value =
+      data.finishPreference;
+  }
+
+  const filters =
+    data.filters || {};
+
+  setCheckboxIfDefined(
+    paperOnlyCheckbox,
+    filters.paperOnly
+  );
+
+  setCheckboxIfDefined(
+    excludeSecretLairCheckbox,
+    filters.excludeSecretLair
+  );
+
+  setCheckboxIfDefined(
+    excludePromosCheckbox,
+    filters.excludePromos
+  );
+
+  setCheckboxIfDefined(
+    excludeFunnyCheckbox,
+    filters.excludeFunny
+  );
+
+  setCheckboxIfDefined(
+    excludeMemorabiliaCheckbox,
+    filters.excludeMemorabilia
+  );
+
+  setCheckboxIfDefined(
+    excludeTokensCheckbox,
+    filters.excludeTokens
+  );
+
+  setCheckboxIfDefined(
+    excludeMinigamesCheckbox,
+    filters.excludeMinigames
+  );
+
+  setCheckboxIfDefined(
+    excludeBoxCheckbox,
+    filters.excludeBox
+  );
+
+  setCheckboxIfDefined(
+    excludeAlchemyCheckbox,
+    filters.excludeAlchemy
+  );
+
+  setCheckboxIfDefined(
+    excludeDigitalCheckbox,
+    filters.excludeDigital
+  );
+
+  /*
+   * We store these now and restore them
+   * after deck analysis confirms the sets
+   * actually exist in the current data.
+   */
+  if (
+    Array.isArray(
+      data.selectedSetOrder
+    )
+  ) {
+    selectedSetOrder =
+      [...data.selectedSetOrder];
+  }
+
+  selectedSetCodes.clear();
+
+  for (
+    const setCode
+    of selectedSetOrder
+  ) {
+    selectedSetCodes.add(
+      setCode
+    );
+  }
+
+  manualAssignments.clear();
+
+  if (
+    data.manualAssignments
+  ) {
+    for (
+      const [name, code]
+      of Object.entries(
+        data.manualAssignments
+      )
+    ) {
+      manualAssignments.set(
+        name,
+        code
+      );
+    }
+  }
+}
+
+
+function setCheckboxIfDefined(
+  element,
+  value
+) {
+  if (
+    typeof value ===
+    "boolean"
+  ) {
+    element.checked =
+      value;
+  }
+}
+
+
+/* ============================================================
+   INDEXEDDB
+   ============================================================ */
+
+function openDatabase() {
+  if (dbPromise) {
+    return dbPromise;
+  }
+
+  dbPromise =
+    new Promise(
+      (resolve, reject) => {
+        const request =
+          indexedDB.open(
+            DB_NAME,
+            DB_VERSION
+          );
+
+        request.onerror =
+          () => {
+            reject(
+              request.error
+            );
+          };
+
+        request.onupgradeneeded =
+          event => {
+            const db =
+              event.target.result;
+
+            /*
+             * Recreate cards store when
+             * upgrading from an older schema.
+             */
+            if (
+              db.objectStoreNames.contains(
+                CARD_STORE
+              )
+            ) {
+              db.deleteObjectStore(
+                CARD_STORE
+              );
+            }
+
+            const cardStore =
+              db.createObjectStore(
+                CARD_STORE,
+                {
+                  keyPath: "key"
+                }
+              );
+
+            cardStore.createIndex(
+              "cacheName",
+              [
+                "cacheId",
+                "nameNorm"
+              ],
+              {
+                unique: false
+              }
+            );
+
+            cardStore.createIndex(
+              "cacheId",
+              "cacheId",
+              {
+                unique: false
+              }
+            );
+
+            if (
+              !db.objectStoreNames.contains(
+                META_STORE
+              )
+            ) {
+              db.createObjectStore(
+                META_STORE,
+                {
+                  keyPath: "key"
+                }
+              );
+            }
+          };
+
+        request.onsuccess =
+          () => {
+            resolve(
+              request.result
+            );
+          };
+      }
+    );
+
+  return dbPromise;
+}
+
+
+async function idbGetMeta(
+  key
+) {
+  const db =
+    await openDatabase();
+
+  return new Promise(
+    (resolve, reject) => {
+      const tx =
+        db.transaction(
+          META_STORE,
+          "readonly"
+        );
+
+      const request =
+        tx
+          .objectStore(
+            META_STORE
+          )
+          .get(key);
+
+      request.onsuccess =
+        () => {
+          resolve(
+            request.result ||
+            null
+          );
+        };
+
+      request.onerror =
+        () => {
+          reject(
+            request.error
+          );
+        };
+    }
+  );
+}
+
+
+async function idbPutMeta(
+  value
+) {
+  const db =
+    await openDatabase();
+
+  return new Promise(
+    (resolve, reject) => {
+      const tx =
+        db.transaction(
+          META_STORE,
+          "readwrite"
+        );
+
+      tx.objectStore(
+        META_STORE
+      ).put(value);
+
+      tx.oncomplete =
+        () => resolve();
+
+      tx.onerror =
+        () =>
+          reject(tx.error);
+    }
+  );
+}
+
+
+async function putCardBatch(
+  cards
+) {
+  if (
+    cards.length === 0
+  ) {
+    return;
+  }
+
+  const db =
+    await openDatabase();
+
+  return new Promise(
+    (resolve, reject) => {
+      const tx =
+        db.transaction(
+          CARD_STORE,
+          "readwrite"
+        );
+
+      const store =
+        tx.objectStore(
+          CARD_STORE
+        );
+
+      for (
+        const card
+        of cards
+      ) {
+        store.put(card);
+      }
+
+      tx.oncomplete =
+        () => resolve();
+
+      tx.onerror =
+        () =>
+          reject(tx.error);
+    }
+  );
+}
+
+
+async function getCardsByName(
+  cacheId,
+  cardName
+) {
+  const db =
+    await openDatabase();
+
+  const normalized =
+    normalizeCardName(
+      cardName
+    );
+
+  return new Promise(
+    (resolve, reject) => {
+      const tx =
+        db.transaction(
+          CARD_STORE,
+          "readonly"
+        );
+
+      const index =
+        tx
+          .objectStore(
+            CARD_STORE
+          )
+          .index(
+            "cacheName"
+          );
+
+      const range =
+        IDBKeyRange.only([
+          cacheId,
+          normalized
+        ]);
+
+      const request =
+        index.getAll(
+          range
+        );
+
+      request.onsuccess =
+        () =>
+          resolve(
+            request.result ||
+            []
+          );
+
+      request.onerror =
+        () =>
+          reject(
+            request.error
+          );
+    }
+  );
+}
+
+
+async function deleteCacheRecords(
+  cacheId
+) {
+  if (!cacheId) {
+    return;
+  }
+
+  const db =
+    await openDatabase();
+
+  return new Promise(
+    (resolve, reject) => {
+      const tx =
+        db.transaction(
+          CARD_STORE,
+          "readwrite"
+        );
+
+      const store =
+        tx.objectStore(
+          CARD_STORE
+        );
+
+      const index =
+        store.index(
+          "cacheId"
+        );
+
+      const request =
+        index.openKeyCursor(
+          IDBKeyRange.only(
+            cacheId
+          )
+        );
+
+      request.onsuccess =
+        event => {
+          const cursor =
+            event.target.result;
+
+          if (!cursor) {
+            return;
+          }
+
+          store.delete(
+            cursor.primaryKey
+          );
+
+          cursor.continue();
+        };
+
+      tx.oncomplete =
+        () => resolve();
+
+      tx.onerror =
+        () =>
+          reject(tx.error);
+    }
+  );
+}
+
+
+async function clearIndexedDb() {
+  if (dbPromise) {
+    const db =
+      await dbPromise;
+
+    db.close();
+  }
+
+  dbPromise = null;
+
+  return new Promise(
+    (resolve, reject) => {
+      const request =
+        indexedDB.deleteDatabase(
+          DB_NAME
+        );
+
+      request.onsuccess =
+        () => resolve();
+
+      request.onerror =
+        () =>
+          reject(
+            request.error
+          );
+
+      request.onblocked =
+        () => {
+          reject(
+            new Error(
+              "Database deletion is blocked by another open tab."
+            )
+          );
+        };
+    }
+  );
+}
+
+
+/* ============================================================
+   BULK DATA
+   ============================================================ */
+
+async function updateBulkStatus() {
+  try {
+    const meta =
+      await idbGetMeta(
+        CACHE_META_KEY
+      );
+
+    if (!meta) {
+      bulkStatus.innerHTML =
+        "<strong>No local database.</strong> Download Scryfall data before analyzing.";
+      return;
+    }
+
+    const ageMs =
+      Date.now() -
+      new Date(
+        meta.importedAt
+      ).getTime();
+
+    const ageHours =
+      ageMs /
+      (
+        1000 *
+        60 *
+        60
+      );
+
+    const freshness =
+      ageHours <= 24
+        ? "Fresh"
+        : "Cached";
+
+    bulkStatus.innerHTML =
+      `<strong>${freshness}</strong> · ` +
+      `${formatNumber(meta.cardCount || 0)} printings · ` +
+      `Scryfall update ${escapeHtml(meta.updatedAt || "unknown")} · ` +
+      `imported ${formatDateTime(meta.importedAt)}`;
+  } catch (error) {
+    console.error(error);
+
+    bulkStatus.textContent =
+      "Unable to inspect the local Scryfall database.";
+  }
+}
+
+
+async function ensureBulkDatabase() {
+  const meta =
+    await idbGetMeta(
+      CACHE_META_KEY
+    );
+
+  if (meta?.cacheId) {
+    return meta;
+  }
+
+  await refreshBulkDatabase();
+
+  const refreshed =
+    await idbGetMeta(
+      CACHE_META_KEY
+    );
+
+  if (!refreshed) {
+    throw new Error(
+      "The local Scryfall database could not be created."
+    );
+  }
+
+  return refreshed;
+}
+
+
+async function refreshBulkDatabase() {
+  if (
+    isImportingBulk
+  ) {
+    return;
+  }
+
+  if (
+    typeof DecompressionStream ===
+    "undefined"
+  ) {
+    alert(
+      "This browser does not support streaming gzip decompression. Use a current version of Chrome, Edge, Firefox, or Safari."
+    );
+
+    return;
+  }
+
+  isImportingBulk = true;
+
+  refreshBulkButton.disabled =
+    true;
+
+  deleteBulkButton.disabled =
+    true;
+
+  analyzeButton.disabled =
+    true;
+
+  bulkProgressArea.classList.remove(
+    "hidden"
+  );
+
+  bulkProgressBar.style.width =
+    "0%";
+
+  bulkProgressMessage.textContent =
+    "Requesting Scryfall bulk-data information…";
+
+  try {
+    const oldMeta =
+      await idbGetMeta(
+        CACHE_META_KEY
+      );
+
+    /*
+     * Scryfall supports looking up a
+     * bulk_data object by type.
+     */
+    const metaResponse =
+      await fetch(
+        "https://api.scryfall.com/bulk-data/default_cards"
+      );
+
+    if (!metaResponse.ok) {
+      throw new Error(
+        `Unable to retrieve Scryfall bulk metadata (${metaResponse.status}).`
+      );
+    }
+
+    const bulkMeta =
+      await metaResponse.json();
+
+    const downloadUri =
+      bulkMeta.jsonl_download_uri ||
+      bulkMeta.download_uri;
+
+    if (!downloadUri) {
+      throw new Error(
+        "Scryfall did not return a bulk download URI."
+      );
+    }
+
+    const cacheId =
+      [
+        bulkMeta.id,
+        bulkMeta.updated_at
+      ]
+        .filter(Boolean)
+        .join("|");
+
+    /*
+     * If already current, don't download again.
+     */
+    if (
+      oldMeta?.cacheId ===
+      cacheId
+    ) {
+      bulkProgressMessage.textContent =
+        "Your local database is already current.";
+
+      bulkProgressBar.style.width =
+        "100%";
+
+      await updateBulkStatus();
+
+      return;
+    }
+
+    bulkProgressMessage.textContent =
+      "Downloading Scryfall bulk data…";
+
+    const response =
+      await fetch(
+        downloadUri
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        `Bulk download failed (${response.status}).`
+      );
+    }
+
+    if (!response.body) {
+      throw new Error(
+        "Streaming downloads are not supported by this browser."
+      );
+    }
+
+    const compressedSize =
+      Number(
+        bulkMeta.compressed_size ||
+        0
+      );
+
+    const contentLength =
+      Number(
+        response.headers.get(
+          "content-length"
+        ) ||
+        compressedSize ||
+        0
+      );
+
+    /*
+     * Track compressed download bytes while
+     * passing chunks into the decompressor.
+     */
+    let downloadedBytes = 0;
+
+    const progressStream =
+      new TransformStream({
+        transform(
+          chunk,
+          controller
+        ) {
+          downloadedBytes +=
+            chunk.byteLength;
+
+          if (
+            contentLength > 0
+          ) {
+            /*
+             * Reserve last 20% of the bar
+             * for parsing/indexing.
+             */
+            const percent =
+              Math.min(
+                80,
+                (
+                  downloadedBytes /
+                  contentLength
+                ) *
+                  80
+              );
+
+            bulkProgressBar.style.width =
+              `${percent.toFixed(1)}%`;
+          }
+
+          controller.enqueue(
+            chunk
+          );
+        }
+      });
+
+    const decompressed =
+      response.body
+        .pipeThrough(
+          progressStream
+        )
+        .pipeThrough(
+          new DecompressionStream(
+            "gzip"
+          )
+        );
+
+    const reader =
+      decompressed.getReader();
+
+    const decoder =
+      new TextDecoder();
+
+    let textBuffer = "";
+    let batch = [];
+
+    let importedCards = 0;
+    let parsedLines = 0;
+
+    while (true) {
+      const {
+        done,
+        value
+      } =
+        await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      textBuffer +=
+        decoder.decode(
+          value,
+          {
+            stream: true
+          }
+        );
+
+      let newlineIndex;
+
+      while (
+        (
+          newlineIndex =
+            textBuffer.indexOf(
+              "\n"
+            )
+        ) !== -1
+      ) {
+        const line =
+          textBuffer
+            .slice(
+              0,
+              newlineIndex
+            )
+            .trim();
+
+        textBuffer =
+          textBuffer.slice(
+            newlineIndex + 1
+          );
+
+        if (!line) {
+          continue;
+        }
+
+        parsedLines++;
+
+        let card;
+
+        try {
+          card =
+            JSON.parse(
+              line
+            );
+        } catch (error) {
+          console.warn(
+            "Skipping malformed bulk-data line.",
+            error
+          );
+
+          continue;
+        }
+
+        const compact =
+          compactBulkCard(
+            card,
+            cacheId
+          );
+
+        if (!compact) {
+          continue;
+        }
+
+        batch.push(
+          compact
+        );
+
+        if (
+          batch.length >=
+          BULK_BATCH_SIZE
+        ) {
+          await putCardBatch(
+            batch
+          );
+
+          importedCards +=
+            batch.length;
+
+          batch = [];
+
+          /*
+           * Parsing progress cannot be known
+           * exactly from compressed byte size,
+           * so pulse through 80–98%.
+           */
+          const pulse =
+            80 +
+            (
+              (
+                importedCards /
+                5000
+              ) %
+              18
+            );
+
+          bulkProgressBar.style.width =
+            `${Math.min(
+              98,
+              pulse
+            )}%`;
+
+          bulkProgressMessage.textContent =
+            `Indexing ${formatNumber(importedCards)} printings…`;
+        }
+      }
+    }
+
+    textBuffer +=
+      decoder.decode();
+
+    const finalLine =
+      textBuffer.trim();
+
+    if (finalLine) {
+      try {
+        const card =
+          JSON.parse(
+            finalLine
+          );
+
+        const compact =
+          compactBulkCard(
+            card,
+            cacheId
+          );
+
+        if (compact) {
+          batch.push(
+            compact
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Unable to parse final bulk-data line.",
+          error
+        );
+      }
+    }
+
+    if (
+      batch.length > 0
+    ) {
+      await putCardBatch(
+        batch
+      );
+
+      importedCards +=
+        batch.length;
+    }
+
+    const newMeta = {
+      key:
+        CACHE_META_KEY,
+
+      cacheId,
+
+      bulkId:
+        bulkMeta.id,
+
+      updatedAt:
+        bulkMeta.updated_at,
+
+      importedAt:
+        new Date().toISOString(),
+
+      cardCount:
+        importedCards,
+
+      downloadUri
+    };
+
+    /*
+     * Only switch active cache after the
+     * entire import completed successfully.
+     */
+    await idbPutMeta(
+      newMeta
+    );
+
+    bulkProgressBar.style.width =
+      "100%";
+
+    bulkProgressMessage.textContent =
+      `Finished indexing ${formatNumber(importedCards)} printings.`;
+
+    /*
+     * Remove old cache after new one is active.
+     */
+    if (
+      oldMeta?.cacheId &&
+      oldMeta.cacheId !==
+        cacheId
+    ) {
+      deleteCacheRecords(
+        oldMeta.cacheId
+      ).catch(
+        error =>
+          console.warn(
+            "Unable to clean up old cache.",
+            error
+          )
+      );
+    }
+
+    await updateBulkStatus();
+  } catch (error) {
+    console.error(error);
+
+    bulkProgressMessage.textContent =
+      `Bulk-data import failed: ${error.message}`;
+
+    alert(
+      `Scryfall database import failed.\n\n${error.message}`
+    );
+  } finally {
+    isImportingBulk = false;
+
+    refreshBulkButton.disabled =
+      false;
+
+    deleteBulkButton.disabled =
+      false;
+
+    analyzeButton.disabled =
+      false;
+  }
+}
+
+
+function compactBulkCard(
+  card,
+  cacheId
+) {
+  if (
+    !card ||
+    !card.id ||
+    !card.name ||
+    !card.set
+  ) {
+    return null;
+  }
+
+  const image =
+    getImageUris(
+      card
+    );
+
+  return {
+    key:
+      `${cacheId}:${card.id}`,
+
+    cacheId,
+
+    id:
+      card.id,
+
+    name:
+      card.name,
+
+    nameNorm:
+      normalizeCardName(
+        card.name
+      ),
+
+    set:
+      card.set,
+
+    setName:
+      card.set_name ||
+      card.set,
+
+    setType:
+      card.set_type ||
+      "",
+
+    games:
+      Array.isArray(
+        card.games
+      )
+        ? card.games
+        : [],
+
+    digital:
+      Boolean(
+        card.digital
+      ),
+
+    promo:
+      Boolean(
+        card.promo
+      ),
+
+    prices: {
+      usd:
+        card.prices?.usd ??
+        null,
+
+      usdFoil:
+        card.prices?.usd_foil ??
+        null,
+
+      usdEtched:
+        card.prices?.usd_etched ??
+        null
+    },
+
+    finishes:
+      card.finishes || [],
+
+    collectorNumber:
+      card.collector_number ||
+      "",
+
+    rarity:
+      card.rarity ||
+      "",
+
+    releasedAt:
+      card.released_at ||
+      "",
+
+    scryfallUri:
+      card.scryfall_uri ||
+      "",
+
+    imageSmall:
+      image.small ||
+      image.thumb ||
+      "",
+
+    imageNormal:
+      image.normal ||
+      image.grid ||
+      image.small ||
+      image.thumb ||
+      ""
+  };
+}
+
+
+function getImageUris(
+  card
+) {
+  if (
+    card.image_uris
+  ) {
+    return card.image_uris;
+  }
+
+  if (
+    Array.isArray(
+      card.card_faces
+    )
+  ) {
+    for (
+      const face
+      of card.card_faces
+    ) {
+      if (
+        face.image_uris
+      ) {
+        return face.image_uris;
+      }
+    }
+  }
+
+  return {};
+}
+
+
+async function deleteBulkDatabase() {
+  if (
+    !confirm(
+      "Delete the locally cached Scryfall database? Your saved deck text will remain."
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await clearIndexedDb();
+
+    bulkProgressArea.classList.add(
+      "hidden"
+    );
+
+    bulkStatus.innerHTML =
+      "<strong>No local database.</strong> Download Scryfall data before analyzing.";
+  } catch (error) {
+    alert(
+      `Unable to delete the local database: ${error.message}`
+    );
+  }
+}
+
+
+/* ============================================================
+   DECK PARSING
+   ============================================================ */
+
+function parseManaBoxList(
+  text
+) {
+  const quantities =
+    new Map();
 
   const lines =
     text
@@ -370,31 +1719,44 @@ function parseManaBoxList(text) {
       )
       .filter(Boolean);
 
-  for (let line of lines) {
+  for (
+    let line
+    of lines
+  ) {
     if (
-      isSectionHeading(line)
+      isSectionHeading(
+        line
+      )
     ) {
       continue;
     }
 
-    /*
-     * Examples:
-     *
-     * 1 Sol Ring
-     * 4 Counterspell
-     * 4x Counterspell
-     */
-    line =
-      line.replace(
-        /^\d+\s*x?\s+/i,
-        ""
+    let quantity = 1;
+
+    const quantityMatch =
+      line.match(
+        /^(\d+)\s*x?\s+/i
       );
 
+    if (
+      quantityMatch
+    ) {
+      quantity =
+        Number(
+          quantityMatch[1]
+        ) || 1;
+
+      line =
+        line.slice(
+          quantityMatch[0]
+            .length
+        );
+    }
+
     /*
-     * Examples:
+     * Remove set + collector notation:
      *
      * Sol Ring (CMM) 396
-     * Counterspell (DMR) 45
      */
     line =
       line.replace(
@@ -403,7 +1765,7 @@ function parseManaBoxList(text) {
       );
 
     /*
-     * ManaBox-style foil markers.
+     * Remove ManaBox foil markers.
      */
     line =
       line.replace(
@@ -418,14 +1780,32 @@ function parseManaBoxList(text) {
       continue;
     }
 
-    names.add(line);
+    const existing =
+      quantities.get(
+        line
+      ) || 0;
+
+    quantities.set(
+      line,
+      existing +
+        quantity
+    );
   }
 
-  return [...names];
+  return [
+    ...quantities.entries()
+  ].map(
+    ([name, quantity]) => ({
+      name,
+      quantity
+    })
+  );
 }
 
 
-function isSectionHeading(line) {
+function isSectionHeading(
+  line
+) {
   const normalized =
     line
       .toLowerCase()
@@ -453,376 +1833,328 @@ function isSectionHeading(line) {
 }
 
 
-/*
- * ------------------------------------------------------------
- * Scryfall
- * ------------------------------------------------------------
- */
-
-async function getPrintings(
-  cardName
+function normalizeCardName(
+  value
 ) {
-  const query =
-    `!"${cardName}"`;
-
-  let url =
-    "https://api.scryfall.com/cards/search" +
-    `?unique=prints&order=released&q=${encodeURIComponent(query)}`;
-
-  const printings = [];
-
-  while (url) {
-    const response =
-      await fetch(url);
-
-    if (
-      response.status === 404
-    ) {
-      return [];
-    }
-
-    if (
-      response.status === 429
-    ) {
-      throw new Error(
-        "Scryfall rate limit reached. Wait and try again."
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        `Scryfall returned HTTP ${response.status}`
-      );
-    }
-
-    const data =
-      await response.json();
-
-    if (
-      Array.isArray(
-        data.data
-      )
-    ) {
-      printings.push(
-        ...data.data
-      );
-    }
-
-    if (
-      data.has_more &&
-      data.next_page
-    ) {
-      await delay(
-        SCRYFALL_DELAY_MS
-      );
-
-      url =
-        data.next_page;
-    } else {
-      url = null;
-    }
-  }
-
-  return printings;
+  return String(
+    value || ""
+  )
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase();
 }
 
 
-/*
- * ------------------------------------------------------------
- * Pricing
- * ------------------------------------------------------------
- */
+/* ============================================================
+   ANALYSIS
+   ============================================================ */
 
-function parsePrice(value) {
+async function analyzeCards() {
   if (
-    value === null ||
-    value === undefined ||
-    value === ""
+    isRunning ||
+    isImportingBulk
   ) {
-    return null;
+    return;
   }
 
-  const number =
-    Number.parseFloat(
-      value
+  const deck =
+    parseManaBoxList(
+      cardInput.value
     );
 
-  return Number.isFinite(
-    number
-  )
-    ? number
-    : null;
+  if (
+    deck.length === 0
+  ) {
+    alert(
+      "No card names were found."
+    );
+
+    return;
+  }
+
+  isRunning = true;
+
+  analyzeButton.disabled =
+    true;
+
+  clearButton.disabled =
+    true;
+
+  analyzeButton.textContent =
+    "Analyzing…";
+
+  progressArea.classList.remove(
+    "hidden"
+  );
+
+  progressBarFill.style.width =
+    "0%";
+
+  try {
+    const cacheMeta =
+      await ensureBulkDatabase();
+
+    currentDeck =
+      deck;
+
+    currentCardNames =
+      deck.map(
+        item =>
+          item.name
+      );
+
+    currentQuantityMap =
+      new Map(
+        deck.map(
+          item => [
+            item.name,
+            item.quantity
+          ]
+        )
+      );
+
+    currentUnmatchedCards =
+      [];
+
+    currentRankedSets =
+      [];
+
+    const sets =
+      new Map();
+
+    for (
+      let index = 0;
+      index < deck.length;
+      index++
+    ) {
+      const entry =
+        deck[index];
+
+      statusMessage.textContent =
+        `Reading ${index + 1} of ${deck.length}: ${entry.name}`;
+
+      progressBarFill.style.width =
+        `${
+          (
+            index /
+            deck.length
+          ) *
+          100
+        }%`;
+
+      const printings =
+        await getCardsByName(
+          cacheMeta.cacheId,
+          entry.name
+        );
+
+      if (
+        printings.length === 0
+      ) {
+        currentUnmatchedCards.push(
+          entry.name
+        );
+
+        continue;
+      }
+
+      addPrintingsToSets(
+        sets,
+        entry.name,
+        printings
+      );
+
+      /*
+       * Yield periodically so UI stays responsive.
+       */
+      if (
+        index % 20 === 0
+      ) {
+        await sleep(0);
+      }
+    }
+
+    currentRankedSets =
+      rankSets(
+        sets,
+        deck.length
+      );
+
+    /*
+     * Remove selections that no longer exist.
+     */
+    selectedSetOrder =
+      selectedSetOrder.filter(
+        code =>
+          currentRankedSets.some(
+            set =>
+              set.code ===
+              code
+          )
+      );
+
+    selectedSetCodes.clear();
+
+    for (
+      const code
+      of selectedSetOrder
+    ) {
+      selectedSetCodes.add(
+        code
+      );
+    }
+
+    /*
+     * Remove invalid manual assignments.
+     */
+    for (
+      const [cardName, code]
+      of manualAssignments
+    ) {
+      const set =
+        getSetByCode(
+          code
+        );
+
+      if (
+        !set ||
+        !set.cards.some(
+          card =>
+            card.name ===
+            cardName
+        )
+      ) {
+        manualAssignments.delete(
+          cardName
+        );
+      }
+    }
+
+    populateSetTypeFilter();
+
+    renderResults();
+
+    progressBarFill.style.width =
+      "100%";
+
+    statusMessage.textContent =
+      "Analysis complete.";
+
+    resultsSection.classList.remove(
+      "hidden"
+    );
+
+    saveState();
+  } catch (error) {
+    console.error(error);
+
+    statusMessage.textContent =
+      `Analysis failed: ${error.message}`;
+
+    alert(
+      `Unable to analyze the deck.\n\n${error.message}`
+    );
+  } finally {
+    isRunning = false;
+
+    analyzeButton.disabled =
+      false;
+
+    clearButton.disabled =
+      false;
+
+    analyzeButton.textContent =
+      "Analyze Deck";
+  }
 }
 
 
-function getCheapestPrintingPrice(
+/* ============================================================
+   PRINTING FILTERS / PRICES
+   ============================================================ */
+
+function printingAllowed(
   printing
 ) {
-  const options = [];
-
-  const normal =
-    parsePrice(
-      printing.prices?.usd
-    );
-
-  const foil =
-    parsePrice(
-      printing.prices?.usd_foil
-    );
-
-  const etched =
-    parsePrice(
-      printing.prices?.usd_etched
-    );
-
-  if (normal !== null) {
-    options.push({
-      price: normal,
-      finish: "normal"
-    });
-  }
-
-  if (foil !== null) {
-    options.push({
-      price: foil,
-      finish: "foil"
-    });
-  }
-
-  if (etched !== null) {
-    options.push({
-      price: etched,
-      finish: "etched"
-    });
+  if (
+    paperOnlyCheckbox.checked &&
+    !printing.games?.includes(
+      "paper"
+    )
+  ) {
+    return false;
   }
 
   if (
-    options.length === 0
+    excludeDigitalCheckbox.checked &&
+    printing.digital
   ) {
-    return null;
+    return false;
   }
 
-  options.sort(
-    (a, b) =>
-      a.price - b.price
-  );
-
-  return options[0];
-}
-
-
-function formatCurrency(value) {
   if (
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(value)
+    excludeSecretLairCheckbox.checked &&
+    isSecretLairPrinting(
+      printing
+    )
   ) {
-    return "N/A";
+    return false;
   }
 
-  return value.toLocaleString(
-    "en-US",
-    {
-      style: "currency",
-      currency: "USD"
-    }
-  );
-}
-
-
-/*
- * ------------------------------------------------------------
- * Build sets
- * ------------------------------------------------------------
- */
-
-function addPrintingsToSets(
-  sets,
-  cardName,
-  printings
-) {
-  const paperOnly =
-    paperOnlyCheckbox.checked;
-
-  const excludeSecretLair =
-    excludeSecretLairCheckbox.checked;
-
-  const excludePromos =
-    excludePromosCheckbox.checked;
-
-  /*
-   * One chosen printing for this card
-   * per set.
-   */
-  const bestPrintingPerSet =
-    new Map();
-
-  for (
-    const printing
-    of printings
+  if (
+    excludePromosCheckbox.checked &&
+    printing.promo
   ) {
-    if (
-      paperOnly &&
-      !printing.games?.includes(
-        "paper"
-      )
-    ) {
-      continue;
-    }
-
-    if (
-      excludeSecretLair &&
-      isSecretLairPrinting(
-        printing
-      )
-    ) {
-      continue;
-    }
-
-    if (
-      excludePromos &&
-      printing.promo === true
-    ) {
-      continue;
-    }
-
-    const setCode =
-      printing.set;
-
-    if (!setCode) {
-      continue;
-    }
-
-    const priceInfo =
-      getCheapestPrintingPrice(
-        printing
-      );
-
-    const existing =
-      bestPrintingPerSet.get(
-        setCode
-      );
-
-    if (!existing) {
-      bestPrintingPerSet.set(
-        setCode,
-        {
-          printing,
-          priceInfo
-        }
-      );
-
-      continue;
-    }
-
-    /*
-     * Prefer priced printing over
-     * unpriced printing.
-     */
-    if (
-      !existing.priceInfo &&
-      priceInfo
-    ) {
-      bestPrintingPerSet.set(
-        setCode,
-        {
-          printing,
-          priceInfo
-        }
-      );
-
-      continue;
-    }
-
-    /*
-     * If both have prices,
-     * choose the cheaper one.
-     */
-    if (
-      existing.priceInfo &&
-      priceInfo &&
-      priceInfo.price <
-        existing.priceInfo.price
-    ) {
-      bestPrintingPerSet.set(
-        setCode,
-        {
-          printing,
-          priceInfo
-        }
-      );
-    }
+    return false;
   }
 
-  for (
-    const [setCode, result]
-    of bestPrintingPerSet.entries()
+  const type =
+    printing.setType;
+
+  if (
+    excludeFunnyCheckbox.checked &&
+    type === "funny"
   ) {
-    const printing =
-      result.printing;
-
-    const priceInfo =
-      result.priceInfo;
-
-    if (
-      !sets.has(setCode)
-    ) {
-      sets.set(
-        setCode,
-        {
-          code:
-            setCode,
-
-          name:
-            printing.set_name ||
-            setCode.toUpperCase(),
-
-          setType:
-            printing.set_type || "",
-
-          cards:
-            new Map()
-        }
-      );
-    }
-
-    sets
-      .get(setCode)
-      .cards
-      .set(
-        cardName,
-        {
-          name:
-            cardName,
-
-          price:
-            priceInfo
-              ? priceInfo.price
-              : null,
-
-          finish:
-            priceInfo
-              ? priceInfo.finish
-              : null,
-
-          collectorNumber:
-            printing.collector_number ||
-            "",
-
-          rarity:
-            printing.rarity ||
-            "",
-
-          scryfallUri:
-            printing.scryfall_uri ||
-            "",
-
-          printingId:
-            printing.id ||
-            ""
-        }
-      );
+    return false;
   }
+
+  if (
+    excludeMemorabiliaCheckbox.checked &&
+    type ===
+      "memorabilia"
+  ) {
+    return false;
+  }
+
+  if (
+    excludeTokensCheckbox.checked &&
+    type === "token"
+  ) {
+    return false;
+  }
+
+  if (
+    excludeMinigamesCheckbox.checked &&
+    type === "minigame"
+  ) {
+    return false;
+  }
+
+  if (
+    excludeBoxCheckbox.checked &&
+    type === "box"
+  ) {
+    return false;
+  }
+
+  if (
+    excludeAlchemyCheckbox.checked &&
+    type === "alchemy"
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 
@@ -836,7 +2168,7 @@ function isSecretLairPrinting(
 
   const name =
     String(
-      printing.set_name || ""
+      printing.setName || ""
     ).toLowerCase();
 
   return (
@@ -848,49 +2180,337 @@ function isSecretLairPrinting(
 }
 
 
-/*
- * ------------------------------------------------------------
- * Rank sets
- * ------------------------------------------------------------
- */
+function parsePrice(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const parsed =
+    Number.parseFloat(
+      value
+    );
+
+  return Number.isFinite(
+    parsed
+  )
+    ? parsed
+    : null;
+}
+
+
+function getPreferredPrice(
+  printing
+) {
+  const normal =
+    parsePrice(
+      printing.prices?.usd
+    );
+
+  const foil =
+    parsePrice(
+      printing.prices?.usdFoil
+    );
+
+  const etched =
+    parsePrice(
+      printing.prices?.usdEtched
+    );
+
+  const preference =
+    finishPreference.value;
+
+  const available =
+    [];
+
+  if (
+    normal !== null
+  ) {
+    available.push({
+      price:
+        normal,
+
+      finish:
+        "normal"
+    });
+  }
+
+  if (
+    foil !== null
+  ) {
+    available.push({
+      price:
+        foil,
+
+      finish:
+        "foil"
+    });
+  }
+
+  if (
+    etched !== null
+  ) {
+    available.push({
+      price:
+        etched,
+
+      finish:
+        "etched"
+    });
+  }
+
+  if (
+    available.length ===
+    0
+  ) {
+    return null;
+  }
+
+  if (
+    preference ===
+    "cheapest"
+  ) {
+    return available.sort(
+      (a, b) =>
+        a.price -
+        b.price
+    )[0];
+  }
+
+  const preferred =
+    available.find(
+      item =>
+        item.finish ===
+        preference
+    );
+
+  if (preferred) {
+    return preferred;
+  }
+
+  /*
+   * Preference unavailable:
+   * use cheapest remaining finish.
+   */
+  return available.sort(
+    (a, b) =>
+      a.price -
+      b.price
+  )[0];
+}
+
+
+/* ============================================================
+   BUILD SET DATA
+   ============================================================ */
+
+function addPrintingsToSets(
+  sets,
+  cardName,
+  printings
+) {
+  const bestPerSet =
+    new Map();
+
+  for (
+    const printing
+    of printings
+  ) {
+    if (
+      !printingAllowed(
+        printing
+      )
+    ) {
+      continue;
+    }
+
+    const priceInfo =
+      getPreferredPrice(
+        printing
+      );
+
+    const existing =
+      bestPerSet.get(
+        printing.set
+      );
+
+    if (!existing) {
+      bestPerSet.set(
+        printing.set,
+        {
+          printing,
+          priceInfo
+        }
+      );
+
+      continue;
+    }
+
+    /*
+     * Prefer priced records.
+     */
+    if (
+      !existing.priceInfo &&
+      priceInfo
+    ) {
+      bestPerSet.set(
+        printing.set,
+        {
+          printing,
+          priceInfo
+        }
+      );
+
+      continue;
+    }
+
+    /*
+     * Same set with multiple collector variants:
+     * keep cheapest matching preferred finish.
+     */
+    if (
+      existing.priceInfo &&
+      priceInfo &&
+      priceInfo.price <
+        existing.priceInfo.price
+    ) {
+      bestPerSet.set(
+        printing.set,
+        {
+          printing,
+          priceInfo
+        }
+      );
+    }
+  }
+
+  for (
+    const [
+      setCode,
+      result
+    ]
+    of bestPerSet
+  ) {
+    const printing =
+      result.printing;
+
+    const priceInfo =
+      result.priceInfo;
+
+    if (
+      !sets.has(
+        setCode
+      )
+    ) {
+      sets.set(
+        setCode,
+        {
+          code:
+            setCode,
+
+          name:
+            printing.setName,
+
+          setType:
+            printing.setType,
+
+          cards:
+            new Map()
+        }
+      );
+    }
+
+    sets
+      .get(
+        setCode
+      )
+      .cards
+      .set(
+        cardName,
+        {
+          name:
+            cardName,
+
+          quantity:
+            currentQuantityMap.get(
+              cardName
+            ) || 1,
+
+          price:
+            priceInfo?.price ??
+            null,
+
+          finish:
+            priceInfo?.finish ??
+            null,
+
+          collectorNumber:
+            printing.collectorNumber,
+
+          rarity:
+            printing.rarity,
+
+          scryfallUri:
+            printing.scryfallUri,
+
+          imageSmall:
+            printing.imageSmall,
+
+          imageNormal:
+            printing.imageNormal,
+
+          printingId:
+            printing.id
+        }
+      );
+  }
+}
+
 
 function rankSets(
   sets,
-  totalCards
+  totalUniqueCards
 ) {
-  return [...sets.values()]
+  return [
+    ...sets.values()
+  ]
     .map(
       set => {
         const cards =
-          [...set.cards.values()]
-            .sort(
-              (a, b) =>
-                a.name.localeCompare(
-                  b.name
-                )
-            );
+          [
+            ...set.cards.values()
+          ].sort(
+            (a, b) =>
+              a.name.localeCompare(
+                b.name
+              )
+          );
 
-        const pricedCards =
+        const priced =
           cards.filter(
             card =>
-              card.price !== null
+              card.price !==
+              null
           );
 
         const totalCost =
-          pricedCards.reduce(
+          priced.reduce(
             (sum, card) =>
-              sum + card.price,
+              sum +
+              (
+                card.price *
+                card.quantity
+              ),
             0
           );
 
-        const averagePrice =
-          pricedCards.length === 0
-            ? null
-            : totalCost /
-              pricedCards.length;
-
         const expensiveCards =
-          pricedCards
+          priced
             .filter(
               card =>
                 card.price >=
@@ -901,18 +2521,6 @@ function rankSets(
                 b.price -
                 a.price
             );
-
-        const mostExpensive =
-          [...pricedCards]
-            .sort(
-              (a, b) =>
-                b.price -
-                a.price
-            )
-            .slice(0, 5);
-
-        const count =
-          cards.length;
 
         return {
           code:
@@ -926,28 +2534,25 @@ function rankSets(
 
           cards,
 
-          count,
-
-          pricedCount:
-            pricedCards.length,
-
-          missingPriceCount:
-            cards.length -
-            pricedCards.length,
+          count:
+            cards.length,
 
           totalCost,
 
-          averagePrice,
+          pricedCount:
+            priced.length,
+
+          missingPriceCount:
+            cards.length -
+            priced.length,
 
           expensiveCards,
 
-          mostExpensive,
-
           coverage:
-            totalCards === 0
+            totalUniqueCards === 0
               ? 0
-              : count /
-                totalCards
+              : cards.length /
+                totalUniqueCards
         };
       }
     )
@@ -963,614 +2568,107 @@ function rankSets(
           );
         }
 
-        if (
-          a.totalCost !==
-          b.totalCost
-        ) {
-          return (
-            a.totalCost -
-            b.totalCost
-          );
-        }
-
         return (
-          a.name.localeCompare(
-            b.name
-          )
+          a.totalCost -
+          b.totalCost
         );
       }
+    )
+    .map(
+      (set, index) => ({
+        ...set,
+        rank:
+          index + 1
+      })
     );
 }
 
 
-/*
- * ------------------------------------------------------------
- * Results
- * ------------------------------------------------------------
- */
+/* ============================================================
+   RESULTS
+   ============================================================ */
 
-function renderResults(
-  rankedSets,
-  totalCards,
-  unmatchedCards
-) {
-  setResults.innerHTML = "";
+function renderResults() {
+  cardCount.textContent =
+    currentDeck.length;
+
+  copyCount.textContent =
+    currentDeck.reduce(
+      (sum, entry) =>
+        sum +
+        entry.quantity,
+      0
+    );
 
   setCount.textContent =
-    rankedSets.length;
+    currentRankedSets.length;
 
   unmatchedCount.textContent =
-    unmatchedCards.length;
+    currentUnmatchedCards.length;
 
-  if (
-    rankedSets.length > 0
-  ) {
-    renderBestSet(
-      rankedSets[0],
-      totalCards
-    );
-  } else {
-    bestSet.classList.add(
-      "hidden"
-    );
-  }
+  renderBestSet();
 
-  rankedSets.forEach(
-    (set, index) => {
-      const row =
-        document.createElement(
-          "tr"
-        );
+  renderSetTable();
 
-      /*
-       * SELECT
-       */
-      const selectCell =
-        document.createElement(
-          "td"
-        );
-
-      const checkbox =
-        document.createElement(
-          "input"
-        );
-
-      checkbox.type =
-        "checkbox";
-
-      checkbox.className =
-        "set-select";
-
-      checkbox.dataset.setCode =
-        set.code;
-
-      checkbox.checked =
-        selectedSetCodes.has(
-          set.code
-        );
-
-      checkbox.addEventListener(
-        "change",
-        () => {
-          toggleSetSelection(
-            set.code,
-            checkbox.checked
-          );
-        }
-      );
-
-      selectCell.appendChild(
-        checkbox
-      );
-
-
-      /*
-       * RANK
-       */
-      const rankCell =
-        document.createElement(
-          "td"
-        );
-
-      rankCell.textContent =
-        index + 1;
-
-
-      /*
-       * SET
-       */
-      const nameCell =
-        document.createElement(
-          "td"
-        );
-
-      nameCell.textContent =
-        set.name;
-
-
-      /*
-       * CODE
-       */
-      const codeCell =
-        document.createElement(
-          "td"
-        );
-
-      codeCell.className =
-        "set-code";
-
-      codeCell.textContent =
-        set.code.toUpperCase();
-
-
-      /*
-       * CARDS
-       */
-      const countCell =
-        document.createElement(
-          "td"
-        );
-
-      countCell.textContent =
-        `${set.count} / ${totalCards}`;
-
-
-      /*
-       * NEW CARDS
-       */
-      const newCardsCell =
-        document.createElement(
-          "td"
-        );
-
-      newCardsCell.className =
-        "new-cards-cell";
-
-      newCardsCell.dataset.setCode =
-        set.code;
-
-      newCardsCell.textContent =
-        set.count;
-
-
-      /*
-       * COVERAGE
-       */
-      const coverageCell =
-        document.createElement(
-          "td"
-        );
-
-      coverageCell.textContent =
-        `${(
-          set.coverage *
-          100
-        ).toFixed(1)}%`;
-
-
-      /*
-       * COST
-       */
-      const costCell =
-        document.createElement(
-          "td"
-        );
-
-      costCell.textContent =
-        formatCurrency(
-          set.totalCost
-        );
-
-      if (
-        set.missingPriceCount >
-        0
-      ) {
-        const note =
-          document.createElement(
-            "div"
-          );
-
-        note.className =
-          "price-note";
-
-        note.textContent =
-          `${set.missingPriceCount} without price`;
-
-        costCell.appendChild(
-          note
-        );
-      }
-
-
-      /*
-       * DETAILS
-       */
-      const cardsCell =
-        document.createElement(
-          "td"
-        );
-
-      const details =
-        document.createElement(
-          "details"
-        );
-
-      details.className =
-        "card-details";
-
-      const summary =
-        document.createElement(
-          "summary"
-        );
-
-      summary.textContent =
-        `Show ${set.count} cards`;
-
-      details.appendChild(
-        summary
-      );
-
-      if (
-        set.expensiveCards.length >
-        0
-      ) {
-        const expensiveBox =
-          document.createElement(
-            "div"
-          );
-
-        expensiveBox.className =
-          "expensive-box";
-
-        const heading =
-          document.createElement(
-            "strong"
-          );
-
-        heading.textContent =
-          `Expensive printings ($${EXPENSIVE_THRESHOLD}+):`;
-
-        expensiveBox.appendChild(
-          heading
-        );
-
-        const list =
-          document.createElement(
-            "ul"
-          );
-
-        for (
-          const card
-          of set.expensiveCards
-        ) {
-          const item =
-            document.createElement(
-              "li"
-            );
-
-          item.textContent =
-            `${card.name}: ${formatCurrency(card.price)} (${card.finish})`;
-
-          list.appendChild(
-            item
-          );
-        }
-
-        expensiveBox.appendChild(
-          list
-        );
-
-        details.appendChild(
-          expensiveBox
-        );
-      }
-
-      const cardTable =
-        document.createElement(
-          "table"
-        );
-
-      cardTable.className =
-        "inner-card-table";
-
-      const thead =
-        document.createElement(
-          "thead"
-        );
-
-      const headerRow =
-        document.createElement(
-          "tr"
-        );
-
-      [
-        "Card",
-        "Price",
-        "Finish",
-        "Rarity",
-        "Collector #"
-      ].forEach(
-        label => {
-          const th =
-            document.createElement(
-              "th"
-            );
-
-          th.textContent =
-            label;
-
-          headerRow.appendChild(
-            th
-          );
-        }
-      );
-
-      thead.appendChild(
-        headerRow
-      );
-
-      cardTable.appendChild(
-        thead
-      );
-
-      const tbody =
-        document.createElement(
-          "tbody"
-        );
-
-      for (
-        const card
-        of set.cards
-      ) {
-        const cardRow =
-          document.createElement(
-            "tr"
-          );
-
-        const nameTd =
-          document.createElement(
-            "td"
-          );
-
-        if (
-          card.scryfallUri
-        ) {
-          const link =
-            document.createElement(
-              "a"
-            );
-
-          link.href =
-            card.scryfallUri;
-
-          link.target =
-            "_blank";
-
-          link.rel =
-            "noopener noreferrer";
-
-          link.textContent =
-            card.name;
-
-          nameTd.appendChild(
-            link
-          );
-        } else {
-          nameTd.textContent =
-            card.name;
-        }
-
-        const priceTd =
-          document.createElement(
-            "td"
-          );
-
-        priceTd.textContent =
-          formatCurrency(
-            card.price
-          );
-
-        if (
-          card.price !== null &&
-          card.price >=
-            EXPENSIVE_THRESHOLD
-        ) {
-          priceTd.classList.add(
-            "expensive-price"
-          );
-        }
-
-        const finishTd =
-          document.createElement(
-            "td"
-          );
-
-        finishTd.textContent =
-          card.finish ||
-          "N/A";
-
-        const rarityTd =
-          document.createElement(
-            "td"
-          );
-
-        rarityTd.textContent =
-          card.rarity ||
-          "N/A";
-
-        const collectorTd =
-          document.createElement(
-            "td"
-          );
-
-        collectorTd.textContent =
-          card.collectorNumber ||
-          "N/A";
-
-        cardRow.appendChild(
-          nameTd
-        );
-
-        cardRow.appendChild(
-          priceTd
-        );
-
-        cardRow.appendChild(
-          finishTd
-        );
-
-        cardRow.appendChild(
-          rarityTd
-        );
-
-        cardRow.appendChild(
-          collectorTd
-        );
-
-        tbody.appendChild(
-          cardRow
-        );
-      }
-
-      cardTable.appendChild(
-        tbody
-      );
-
-      details.appendChild(
-        cardTable
-      );
-
-      cardsCell.appendChild(
-        details
-      );
-
-      row.appendChild(
-        selectCell
-      );
-
-      row.appendChild(
-        rankCell
-      );
-
-      row.appendChild(
-        nameCell
-      );
-
-      row.appendChild(
-        codeCell
-      );
-
-      row.appendChild(
-        countCell
-      );
-
-      row.appendChild(
-        newCardsCell
-      );
-
-      row.appendChild(
-        coverageCell
-      );
-
-      row.appendChild(
-        costCell
-      );
-
-      row.appendChild(
-        cardsCell
-      );
-
-      setResults.appendChild(
-        row
-      );
-    }
-  );
-
-  renderUnmatchedCards(
-    unmatchedCards
-  );
+  renderUnmatchedCards();
 
   updateDeckBuilder();
 }
 
 
-/*
- * ------------------------------------------------------------
- * Best set
- * ------------------------------------------------------------
- */
+function renderBestSet() {
+  if (
+    currentRankedSets.length ===
+    0
+  ) {
+    bestSet.classList.add(
+      "hidden"
+    );
 
-function renderBestSet(
-  set,
-  totalCards
-) {
-  const percentage =
-    (
-      set.count /
-      totalCards *
-      100
-    ).toFixed(1);
+    return;
+  }
+
+  const set =
+    currentRankedSets[0];
 
   bestSetName.textContent =
     `${set.name} (${set.code.toUpperCase()})`;
 
-  bestSetStats.innerHTML = "";
+  bestSetStats.innerHTML =
+    "";
 
-  const coverageLine =
+  const coverage =
     document.createElement(
       "div"
     );
 
-  coverageLine.textContent =
-    `${set.count} of ${totalCards} cards — ${percentage}% coverage`;
+  coverage.textContent =
+    `${set.count} of ${currentDeck.length} unique cards · ${(set.coverage * 100).toFixed(1)}% coverage`;
 
-  bestSetStats.appendChild(
-    coverageLine
-  );
-
-  const costLine =
+  const cost =
     document.createElement(
       "div"
     );
 
-  costLine.textContent =
-    `Estimated total: ${formatCurrency(set.totalCost)}`;
+  cost.textContent =
+    `Estimated assigned value if sourced from this set: ${formatCurrency(set.totalCost)}`;
 
-  bestSetStats.appendChild(
-    costLine
+  bestSetStats.append(
+    coverage,
+    cost
   );
 
   if (
-    set.averagePrice !== null
-  ) {
-    const averageLine =
-      document.createElement(
-        "div"
-      );
-
-    averageLine.textContent =
-      `Average card price: ${formatCurrency(set.averagePrice)}`;
-
-    bestSetStats.appendChild(
-      averageLine
-    );
-  }
-
-  if (
-    set.mostExpensive.length >
+    set.expensiveCards.length >
     0
   ) {
-    const title =
+    const heading =
       document.createElement(
         "strong"
       );
 
-    title.textContent =
-      "Most expensive:";
-
-    bestSetStats.appendChild(
-      title
-    );
+    heading.textContent =
+      " Expensive printings:";
 
     const list =
       document.createElement(
@@ -1579,22 +2677,24 @@ function renderBestSet(
 
     for (
       const card
-      of set.mostExpensive
+      of set.expensiveCards
+        .slice(0, 5)
     ) {
-      const item =
+      const li =
         document.createElement(
           "li"
         );
 
-      item.textContent =
-        `${card.name}: ${formatCurrency(card.price)} (${card.finish})`;
+      li.textContent =
+        `${card.name} — ${formatCurrency(card.price)}`;
 
       list.appendChild(
-        item
+        li
       );
     }
 
-    bestSetStats.appendChild(
+    bestSetStats.append(
+      heading,
       list
     );
   }
@@ -1605,11 +2705,665 @@ function renderBestSet(
 }
 
 
-/*
- * ------------------------------------------------------------
- * Selection order
- * ------------------------------------------------------------
- */
+/* ============================================================
+   SET TABLE FILTER / SORT
+   ============================================================ */
+
+function populateSetTypeFilter() {
+  const previous =
+    setTypeFilter.value;
+
+  const types =
+    [
+      ...new Set(
+        currentRankedSets
+          .map(
+            set =>
+              set.setType
+          )
+          .filter(Boolean)
+      )
+    ].sort();
+
+  setTypeFilter.innerHTML =
+    '<option value="">All set types</option>';
+
+  for (
+    const type
+    of types
+  ) {
+    const option =
+      document.createElement(
+        "option"
+      );
+
+    option.value =
+      type;
+
+    option.textContent =
+      prettifySetType(
+        type
+      );
+
+    setTypeFilter.appendChild(
+      option
+    );
+  }
+
+  if (
+    types.includes(
+      previous
+    )
+  ) {
+    setTypeFilter.value =
+      previous;
+  }
+}
+
+
+function getVisibleSets() {
+  const search =
+    setFilter.value
+      .trim()
+      .toLowerCase();
+
+  const type =
+    setTypeFilter.value;
+
+  const minCoverage =
+    Number(
+      minimumCoverage.value ||
+      0
+    );
+
+  const coverageResult =
+    calculateSelectedCoverage();
+
+  const covered =
+    coverageResult.coveredCards;
+
+  let sets =
+    currentRankedSets.map(
+      set => ({
+        ...set,
+
+        newCards:
+          selectedSetCodes.has(
+            set.code
+          )
+            ? 0
+            : set.cards.filter(
+                card =>
+                  !covered.has(
+                    card.name
+                  )
+              ).length
+      })
+    );
+
+  sets =
+    sets.filter(
+      set => {
+        if (
+          search &&
+          !set.name
+            .toLowerCase()
+            .includes(
+              search
+            ) &&
+          !set.code
+            .toLowerCase()
+            .includes(
+              search
+            )
+        ) {
+          return false;
+        }
+
+        if (
+          type &&
+          set.setType !==
+            type
+        ) {
+          return false;
+        }
+
+        if (
+          set.coverage *
+            100 <
+          minCoverage
+        ) {
+          return false;
+        }
+
+        if (
+          selectedOnlyFilter.checked &&
+          !selectedSetCodes.has(
+            set.code
+          )
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    );
+
+  sets.sort(
+    compareRankingRows
+  );
+
+  return sets;
+}
+
+
+function compareRankingRows(
+  a,
+  b
+) {
+  const key =
+    rankingSort.key;
+
+  let left;
+  let right;
+
+  switch (key) {
+    case "rank":
+      left =
+        a.rank;
+
+      right =
+        b.rank;
+      break;
+
+    case "name":
+      left =
+        a.name.toLowerCase();
+
+      right =
+        b.name.toLowerCase();
+      break;
+
+    case "code":
+      left =
+        a.code.toLowerCase();
+
+      right =
+        b.code.toLowerCase();
+      break;
+
+    case "newCards":
+      left =
+        a.newCards;
+
+      right =
+        b.newCards;
+      break;
+
+    case "coverage":
+      left =
+        a.coverage;
+
+      right =
+        b.coverage;
+      break;
+
+    case "totalCost":
+      left =
+        a.totalCost;
+
+      right =
+        b.totalCost;
+      break;
+
+    case "count":
+    default:
+      left =
+        a.count;
+
+      right =
+        b.count;
+      break;
+  }
+
+  let result;
+
+  if (
+    typeof left ===
+      "string" &&
+    typeof right ===
+      "string"
+  ) {
+    result =
+      left.localeCompare(
+        right
+      );
+  } else {
+    result =
+      left -
+      right;
+  }
+
+  return rankingSort.direction ===
+    "asc"
+    ? result
+    : -result;
+}
+
+
+function defaultSortDirection(
+  key
+) {
+  if (
+    key === "name" ||
+    key === "code" ||
+    key === "rank"
+  ) {
+    return "asc";
+  }
+
+  return "desc";
+}
+
+
+function renderSetTable() {
+  if (
+    !setResults
+  ) {
+    return;
+  }
+
+  setResults.innerHTML =
+    "";
+
+  const visible =
+    getVisibleSets();
+
+  visibleSetCount.textContent =
+    `${visible.length} of ${currentRankedSets.length} sets`;
+
+  updateSortArrows();
+
+  for (
+    const set
+    of visible
+  ) {
+    setResults.appendChild(
+      buildSetRow(
+        set
+      )
+    );
+  }
+}
+
+
+function updateSortArrows() {
+  document
+    .querySelectorAll(
+      ".sortable-header"
+    )
+    .forEach(header => {
+      const arrow =
+        header.querySelector(
+          ".sort-arrow"
+        );
+
+      if (!arrow) {
+        return;
+      }
+
+      if (
+        header.dataset.sort ===
+        rankingSort.key
+      ) {
+        arrow.textContent =
+          rankingSort.direction ===
+          "asc"
+            ? "↑"
+            : "↓";
+      } else {
+        arrow.textContent =
+          "";
+      }
+    });
+}
+
+
+function buildSetRow(
+  set
+) {
+  const row =
+    document.createElement(
+      "tr"
+    );
+
+  /*
+   * Select
+   */
+  const selectCell =
+    document.createElement(
+      "td"
+    );
+
+  const checkbox =
+    document.createElement(
+      "input"
+    );
+
+  checkbox.type =
+    "checkbox";
+
+  checkbox.className =
+    "set-select";
+
+  checkbox.dataset.setCode =
+    set.code;
+
+  checkbox.checked =
+    selectedSetCodes.has(
+      set.code
+    );
+
+  checkbox.addEventListener(
+    "change",
+    () => {
+      toggleSetSelection(
+        set.code,
+        checkbox.checked
+      );
+    }
+  );
+
+  selectCell.appendChild(
+    checkbox
+  );
+
+
+  const rankCell =
+    textCell(
+      set.rank
+    );
+
+  const nameCell =
+    textCell(
+      set.name
+    );
+
+  const codeCell =
+    textCell(
+      set.code.toUpperCase()
+    );
+
+  codeCell.className =
+    "set-code";
+
+
+  const countCell =
+    textCell(
+      `${set.count} / ${currentDeck.length}`
+    );
+
+
+  const newCell =
+    textCell(
+      set.newCards
+    );
+
+  if (
+    set.newCards > 0
+  ) {
+    newCell.classList.add(
+      "new-card-count"
+    );
+  }
+
+
+  const coverageCell =
+    textCell(
+      `${(set.coverage * 100).toFixed(1)}%`
+    );
+
+
+  const costCell =
+    textCell(
+      formatCurrency(
+        set.totalCost
+      )
+    );
+
+  if (
+    set.missingPriceCount >
+    0
+  ) {
+    const note =
+      document.createElement(
+        "div"
+      );
+
+    note.className =
+      "price-note";
+
+    note.textContent =
+      `${set.missingPriceCount} unpriced`;
+
+    costCell.appendChild(
+      note
+    );
+  }
+
+
+  const detailsCell =
+    document.createElement(
+      "td"
+    );
+
+  const details =
+    document.createElement(
+      "details"
+    );
+
+  details.className =
+    "card-details";
+
+  const summary =
+    document.createElement(
+      "summary"
+    );
+
+  summary.textContent =
+    `Show ${set.count} cards`;
+
+  details.appendChild(
+    summary
+  );
+
+
+  if (
+    set.expensiveCards.length >
+    0
+  ) {
+    const box =
+      document.createElement(
+        "div"
+      );
+
+    box.className =
+      "expensive-box";
+
+    const title =
+      document.createElement(
+        "strong"
+      );
+
+    title.textContent =
+      `Expensive printings ($${EXPENSIVE_THRESHOLD}+ each)`;
+
+    box.appendChild(
+      title
+    );
+
+    const ul =
+      document.createElement(
+        "ul"
+      );
+
+    for (
+      const card
+      of set.expensiveCards
+    ) {
+      const li =
+        document.createElement(
+          "li"
+        );
+
+      li.textContent =
+        `${card.name}: ${formatCurrency(card.price)} (${card.finish || "unknown"})`;
+
+      ul.appendChild(
+        li
+      );
+    }
+
+    box.appendChild(
+      ul
+    );
+
+    details.appendChild(
+      box
+    );
+  }
+
+
+  const innerTable =
+    document.createElement(
+      "table"
+    );
+
+  innerTable.className =
+    "inner-card-table";
+
+  innerTable.innerHTML =
+    `
+      <thead>
+        <tr>
+          <th>Qty</th>
+          <th>Card</th>
+          <th>Price</th>
+          <th>Finish</th>
+          <th>Rarity</th>
+          <th>Collector #</th>
+        </tr>
+      </thead>
+    `;
+
+  const tbody =
+    document.createElement(
+      "tbody"
+    );
+
+  for (
+    const card
+    of set.cards
+  ) {
+    const tr =
+      document.createElement(
+        "tr"
+      );
+
+    tr.appendChild(
+      textCell(
+        card.quantity
+      )
+    );
+
+    const cardCell =
+      createCardLinkCell(
+        card
+      );
+
+    tr.appendChild(
+      cardCell
+    );
+
+    const priceCell =
+      textCell(
+        formatCurrency(
+          card.price
+        )
+      );
+
+    if (
+      card.price !== null &&
+      card.price >=
+        EXPENSIVE_THRESHOLD
+    ) {
+      priceCell.classList.add(
+        "expensive-price"
+      );
+    }
+
+    tr.appendChild(
+      priceCell
+    );
+
+    tr.appendChild(
+      textCell(
+        card.finish ||
+        "N/A"
+      )
+    );
+
+    tr.appendChild(
+      textCell(
+        card.rarity ||
+        "N/A"
+      )
+    );
+
+    tr.appendChild(
+      textCell(
+        card.collectorNumber ||
+        "N/A"
+      )
+    );
+
+    tbody.appendChild(
+      tr
+    );
+  }
+
+  innerTable.appendChild(
+    tbody
+  );
+
+  details.appendChild(
+    innerTable
+  );
+
+  detailsCell.appendChild(
+    details
+  );
+
+
+  row.append(
+    selectCell,
+    rankCell,
+    nameCell,
+    codeCell,
+    countCell,
+    newCell,
+    coverageCell,
+    costCell,
+    detailsCell
+  );
+
+  return row;
+}
+
+
+/* ============================================================
+   SET SELECTION / MANUAL ASSIGNMENT
+   ============================================================ */
 
 function toggleSetSelection(
   setCode,
@@ -1637,166 +3391,324 @@ function toggleSetSelection(
     selectedSetOrder =
       selectedSetOrder.filter(
         code =>
-          code !== setCode
+          code !==
+          setCode
       );
+
+    /*
+     * Remove manual assignments to
+     * deselected set.
+     */
+    for (
+      const [cardName, code]
+      of manualAssignments
+    ) {
+      if (
+        code ===
+        setCode
+      ) {
+        manualAssignments.delete(
+          cardName
+        );
+      }
+    }
   }
+
+  saveState();
+
+  renderSetTable();
 
   updateDeckBuilder();
 }
 
 
-/*
- * ------------------------------------------------------------
- * Find set
- * ------------------------------------------------------------
- */
+function clearSelectedSets() {
+  selectedSetCodes.clear();
 
-function getSetByCode(
-  setCode
-) {
-  return currentRankedSets.find(
-    set =>
-      set.code === setCode
-  ) || null;
+  selectedSetOrder = [];
+
+  manualAssignments.clear();
+
+  saveState();
+
+  renderSetTable();
+
+  updateDeckBuilder();
 }
 
 
-/*
- * ------------------------------------------------------------
- * Coverage
- * ------------------------------------------------------------
- */
+function getSetByCode(
+  code
+) {
+  return (
+    currentRankedSets.find(
+      set =>
+        set.code ===
+        code
+    ) ||
+    null
+  );
+}
+
+
+function getCardFromSet(
+  set,
+  cardName
+) {
+  return (
+    set?.cards.find(
+      card =>
+        card.name ===
+        cardName
+    ) ||
+    null
+  );
+}
+
+
+function getEligibleSelectedSetsForCard(
+  cardName
+) {
+  const result = [];
+
+  for (
+    const code
+    of selectedSetOrder
+  ) {
+    const set =
+      getSetByCode(
+        code
+      );
+
+    if (
+      getCardFromSet(
+        set,
+        cardName
+      )
+    ) {
+      result.push(
+        set
+      );
+    }
+  }
+
+  return result;
+}
+
+
+/* ============================================================
+   COVERAGE / ASSIGNMENT
+   ============================================================ */
 
 function calculateSelectedCoverage() {
   const coveredCards =
     new Map();
 
-  const selectedSets = [];
+  const assignmentsBySet =
+    new Map();
 
   let totalCost = 0;
 
-  /*
-   * IMPORTANT:
-   *
-   * Process sets in user selection order,
-   * not ranking order.
-   */
   for (
-    const setCode
-    of selectedSetOrder
+    const deckCard
+    of currentDeck
   ) {
-    const set =
-      getSetByCode(
-        setCode
+    const cardName =
+      deckCard.name;
+
+    const eligible =
+      getEligibleSelectedSetsForCard(
+        cardName
       );
 
-    if (!set) {
+    if (
+      eligible.length === 0
+    ) {
       continue;
     }
 
-    const newCards = [];
-    const duplicates = [];
+    let chosenSet =
+      null;
 
-    let contributionCost = 0;
-
-    for (
-      const card
-      of set.cards
-    ) {
-      if (
-        coveredCards.has(
-          card.name
-        )
-      ) {
-        duplicates.push(
-          card
-        );
-
-        continue;
-      }
-
-      const assignment = {
-        ...card,
-
-        sourceSet:
-          set.code,
-
-        sourceSetName:
-          set.name
-      };
-
-      coveredCards.set(
-        card.name,
-        assignment
+    const manualCode =
+      manualAssignments.get(
+        cardName
       );
 
-      newCards.push(
-        assignment
-      );
-
-      if (
-        card.price !== null
-      ) {
-        totalCost +=
-          card.price;
-
-        contributionCost +=
-          card.price;
-      }
+    if (manualCode) {
+      chosenSet =
+        eligible.find(
+          set =>
+            set.code ===
+            manualCode
+        ) ||
+        null;
     }
 
-    selectedSets.push({
-      set,
-      newCards,
-      duplicates,
-      contributionCost
-    });
+    /*
+     * Otherwise first selected set wins.
+     */
+    if (!chosenSet) {
+      chosenSet =
+        eligible[0];
+    }
+
+    const card =
+      getCardFromSet(
+        chosenSet,
+        cardName
+      );
+
+    if (!card) {
+      continue;
+    }
+
+    const assignment = {
+      ...card,
+
+      sourceSet:
+        chosenSet.code,
+
+      sourceSetName:
+        chosenSet.name,
+
+      quantity:
+        deckCard.quantity
+    };
+
+    coveredCards.set(
+      cardName,
+      assignment
+    );
+
+    if (
+      !assignmentsBySet.has(
+        chosenSet.code
+      )
+    ) {
+      assignmentsBySet.set(
+        chosenSet.code,
+        []
+      );
+    }
+
+    assignmentsBySet
+      .get(
+        chosenSet.code
+      )
+      .push(
+        assignment
+      );
+
+    if (
+      assignment.price !==
+      null
+    ) {
+      totalCost +=
+        assignment.price *
+        assignment.quantity;
+    }
   }
 
   const remainingCards =
-    currentCardNames.filter(
-      cardName =>
+    currentDeck.filter(
+      deckCard =>
         !coveredCards.has(
-          cardName
+          deckCard.name
         )
     );
 
+  const selectedSets =
+    selectedSetOrder
+      .map(
+        code => {
+          const set =
+            getSetByCode(
+              code
+            );
+
+          if (!set) {
+            return null;
+          }
+
+          const assignedCards =
+            assignmentsBySet.get(
+              code
+            ) || [];
+
+          const contributionCost =
+            assignedCards.reduce(
+              (sum, card) =>
+                sum +
+                (
+                  (
+                    card.price ||
+                    0
+                  ) *
+                  card.quantity
+                ),
+              0
+            );
+
+          return {
+            set,
+
+            assignedCards,
+
+            contributionCost,
+
+            matchedCards:
+              set.cards.length,
+
+            overlapCount:
+              set.cards.filter(
+                card =>
+                  coveredCards.has(
+                    card.name
+                  ) &&
+                  coveredCards.get(
+                    card.name
+                  )
+                    .sourceSet !==
+                  code
+              ).length
+          };
+        }
+      )
+      .filter(Boolean);
+
   return {
     coveredCards,
-    selectedSets,
     remainingCards,
+    selectedSets,
+    assignmentsBySet,
     totalCost
   };
 }
 
 
-/*
- * ------------------------------------------------------------
- * Main builder refresh
- * ------------------------------------------------------------
- */
+/* ============================================================
+   BUILDER
+   ============================================================ */
 
 function updateDeckBuilder() {
   const result =
     calculateSelectedCoverage();
 
-  const totalCards =
-    currentCardNames.length;
+  const total =
+    currentDeck.length;
 
   const covered =
     result.coveredCards.size;
-
-  const remaining =
-    result.remainingCards.length;
 
   selectedSetCount.textContent =
     selectedSetOrder.length;
 
   coveredCardCount.textContent =
-    `${covered} / ${totalCards}`;
+    `${covered} / ${total}`;
 
   remainingCardCount.textContent =
-    remaining;
+    result.remainingCards.length;
 
   selectedSetsCost.textContent =
     formatCurrency(
@@ -1804,13 +3716,13 @@ function updateDeckBuilder() {
     );
 
   const percent =
-    totalCards === 0
+    total === 0
       ? 0
       : (
           covered /
-          totalCards *
-          100
-        );
+          total
+        ) *
+        100;
 
   coverageBarFill.style.width =
     `${percent}%`;
@@ -1819,64 +3731,40 @@ function updateDeckBuilder() {
     `${percent.toFixed(1)}% covered`;
 
   renderSelectedSets(
-    result.selectedSets
+    result
   );
 
   renderRemainingCards(
-    result.remainingCards
-  );
-
-  updateNewCardCounts(
-    result.coveredCards
+    result
   );
 
   updateNextRecommendation(
-    result.remainingCards
+    result
   );
 
-  /*
-   * NEW:
-   * Build the complete final assignment.
-   */
   renderFinalAssignment(
     result
   );
 }
 
 
-/*
- * ------------------------------------------------------------
- * Selected sets
- * ------------------------------------------------------------
- */
-
 function renderSelectedSets(
-  selectedSets
+  result
 ) {
-  selectedSetsList.innerHTML = "";
+  selectedSetsList.innerHTML =
+    "";
 
   if (
-    selectedSets.length === 0
+    result.selectedSets.length ===
+    0
   ) {
-    const message =
-      document.createElement(
-        "p"
-      );
-
-    message.className =
-      "empty-message";
-
-    message.textContent =
-      "No sets selected yet.";
-
-    selectedSetsList.appendChild(
-      message
-    );
+    selectedSetsList.innerHTML =
+      '<p class="empty-message">No sets selected yet.</p>';
 
     return;
   }
 
-  selectedSets.forEach(
+  result.selectedSets.forEach(
     (entry, index) => {
       const wrapper =
         document.createElement(
@@ -1894,15 +3782,15 @@ function renderSelectedSets(
       header.className =
         "selected-set-header";
 
-      const name =
+      const title =
         document.createElement(
           "div"
         );
 
-      name.className =
+      title.className =
         "selected-set-name";
 
-      name.textContent =
+      title.textContent =
         `${index + 1}. ${entry.set.name} (${entry.set.code.toUpperCase()})`;
 
       const remove =
@@ -1919,36 +3807,15 @@ function renderSelectedSets(
       remove.addEventListener(
         "click",
         () => {
-          selectedSetCodes.delete(
-            entry.set.code
+          toggleSetSelection(
+            entry.set.code,
+            false
           );
-
-          selectedSetOrder =
-            selectedSetOrder.filter(
-              code =>
-                code !==
-                entry.set.code
-            );
-
-          const checkbox =
-            document.querySelector(
-              `.set-select[data-set-code="${entry.set.code}"]`
-            );
-
-          if (checkbox) {
-            checkbox.checked =
-              false;
-          }
-
-          updateDeckBuilder();
         }
       );
 
-      header.appendChild(
-        name
-      );
-
-      header.appendChild(
+      header.append(
+        title,
         remove
       );
 
@@ -1960,53 +3827,13 @@ function renderSelectedSets(
       meta.className =
         "selected-set-meta";
 
-      const newCount =
-        document.createElement(
-          "span"
-        );
+      meta.textContent =
+        `${entry.assignedCards.length} assigned · ` +
+        `${formatCurrency(entry.contributionCost)} · ` +
+        `${entry.overlapCount} overlaps`;
 
-      newCount.className =
-        "new-card-count";
-
-      newCount.textContent =
-        `${entry.newCards.length} assigned cards`;
-
-      const duplicateCount =
-        document.createElement(
-          "span"
-        );
-
-      duplicateCount.className =
-        "duplicate-count";
-
-      duplicateCount.textContent =
-        ` · ${entry.duplicates.length} already covered`;
-
-      const cost =
-        document.createElement(
-          "span"
-        );
-
-      cost.textContent =
-        ` · ${formatCurrency(entry.contributionCost)} assigned value`;
-
-      meta.appendChild(
-        newCount
-      );
-
-      meta.appendChild(
-        duplicateCount
-      );
-
-      meta.appendChild(
-        cost
-      );
-
-      wrapper.appendChild(
-        header
-      );
-
-      wrapper.appendChild(
+      wrapper.append(
+        header,
         meta
       );
 
@@ -2018,26 +3845,22 @@ function renderSelectedSets(
 }
 
 
-/*
- * ------------------------------------------------------------
- * Remaining cards
- * ------------------------------------------------------------
- */
-
 function renderRemainingCards(
-  remainingCards
+  result
 ) {
   remainingCardsList.innerHTML =
     "";
 
   if (
-    currentCardNames.length === 0
+    currentDeck.length ===
+    0
   ) {
     return;
   }
 
   if (
-    remainingCards.length === 0
+    result.remainingCards.length ===
+    0
   ) {
     const complete =
       document.createElement(
@@ -2048,7 +3871,7 @@ function renderRemainingCards(
       "complete-message";
 
     complete.textContent =
-      "All cards are covered by your selected sets.";
+      "All cards are covered.";
 
     remainingCardsList.appendChild(
       complete
@@ -2058,8 +3881,8 @@ function renderRemainingCards(
   }
 
   for (
-    const cardName
-    of remainingCards
+    const deckCard
+    of result.remainingCards
   ) {
     const row =
       document.createElement(
@@ -2075,35 +3898,33 @@ function renderRemainingCards(
       );
 
     name.textContent =
-      cardName;
+      deckCard.quantity > 1
+        ? `${deckCard.quantity}× ${deckCard.name}`
+        : deckCard.name;
 
     const availability =
+      currentRankedSets.filter(
+        set =>
+          getCardFromSet(
+            set,
+            deckCard.name
+          )
+      ).length;
+
+    const count =
       document.createElement(
         "span"
       );
 
-    const availableSetCount =
-      currentRankedSets.filter(
-        set =>
-          set.cards.some(
-            card =>
-              card.name ===
-              cardName
-          )
-      ).length;
-
-    availability.textContent =
-      `${availableSetCount} sets`;
-
-    availability.className =
+    count.className =
       "price-note";
 
-    row.appendChild(
-      name
-    );
+    count.textContent =
+      `${availability} sets`;
 
-    row.appendChild(
-      availability
+    row.append(
+      name,
+      count
     );
 
     remainingCardsList.appendChild(
@@ -2113,84 +3934,19 @@ function renderRemainingCards(
 }
 
 
-/*
- * ------------------------------------------------------------
- * New-card counts
- * ------------------------------------------------------------
- */
-
-function updateNewCardCounts(
-  coveredCards
-) {
-  for (
-    const set
-    of currentRankedSets
-  ) {
-    let newCards = 0;
-
-    for (
-      const card
-      of set.cards
-    ) {
-      if (
-        !coveredCards.has(
-          card.name
-        )
-      ) {
-        newCards++;
-      }
-    }
-
-    if (
-      selectedSetCodes.has(
-        set.code
-      )
-    ) {
-      newCards = 0;
-    }
-
-    const cell =
-      document.querySelector(
-        `.new-cards-cell[data-set-code="${set.code}"]`
-      );
-
-    if (!cell) {
-      continue;
-    }
-
-    cell.textContent =
-      newCards;
-
-    if (
-      newCards > 0
-    ) {
-      cell.classList.add(
-        "new-card-count"
-      );
-    } else {
-      cell.classList.remove(
-        "new-card-count"
-      );
-    }
-  }
-}
-
-
-/*
- * ------------------------------------------------------------
- * Best next set
- * ------------------------------------------------------------
- */
+/* ============================================================
+   NEXT SET RECOMMENDATION
+   ============================================================ */
 
 function updateNextRecommendation(
-  remainingCards
+  result
 ) {
   remainingRecommendation.innerHTML =
     "";
 
   if (
-    remainingCards.length === 0 ||
-    currentRankedSets.length === 0
+    result.remainingCards.length ===
+    0
   ) {
     remainingRecommendation.classList.add(
       "hidden"
@@ -2199,14 +3955,15 @@ function updateNextRecommendation(
     return;
   }
 
-  const remainingSet =
+  const remainingNames =
     new Set(
-      remainingCards
+      result.remainingCards.map(
+        card =>
+          card.name
+      )
     );
 
-  let bestSet = null;
-  let bestNewCards = [];
-  let bestCost = null;
+  let best = null;
 
   for (
     const set
@@ -2220,70 +3977,62 @@ function updateNextRecommendation(
       continue;
     }
 
-    const newCards =
+    const cards =
       set.cards.filter(
         card =>
-          remainingSet.has(
+          remainingNames.has(
             card.name
           )
       );
 
-    const newCardCost =
-      newCards.reduce(
+    if (
+      cards.length === 0
+    ) {
+      continue;
+    }
+
+    const cost =
+      cards.reduce(
         (sum, card) =>
           sum +
           (
-            card.price ??
-            0
+            (
+              card.price ||
+              0
+            ) *
+            (
+              currentQuantityMap.get(
+                card.name
+              ) ||
+              1
+            )
           ),
         0
       );
 
+    const candidate = {
+      set,
+      cards,
+      cost
+    };
+
     if (
-      newCards.length >
-      bestNewCards.length
-    ) {
-      bestSet =
-        set;
-
-      bestNewCards =
-        newCards;
-
-      bestCost =
-        newCardCost;
-
-      continue;
-    }
-
-    /*
-     * Same coverage:
-     * choose lower estimated contribution cost.
-     */
-    if (
-      newCards.length ===
-        bestNewCards.length &&
-      newCards.length > 0 &&
+      !best ||
+      cards.length >
+        best.cards.length ||
       (
-        bestCost === null ||
-        newCardCost <
-          bestCost
+        cards.length ===
+          best.cards.length &&
+        cost <
+          best.cost
       )
     ) {
-      bestSet =
-        set;
-
-      bestNewCards =
-        newCards;
-
-      bestCost =
-        newCardCost;
+      best =
+        candidate;
     }
   }
 
-  if (
-    !bestSet ||
-    bestNewCards.length === 0
-  ) {
+  if (!best) {
     remainingRecommendation.classList.add(
       "hidden"
     );
@@ -2291,21 +4040,17 @@ function updateNextRecommendation(
     return;
   }
 
-  const title =
-    document.createElement(
-      "strong"
-    );
-
-  title.textContent =
-    "Best next set: ";
-
   const text =
     document.createElement(
-      "span"
+      "div"
     );
 
-  text.textContent =
-    `${bestSet.name} (${bestSet.code.toUpperCase()}) adds ${bestNewCards.length} remaining cards for about ${formatCurrency(bestCost)}.`;
+  text.innerHTML =
+    `<strong>Best next set:</strong> ` +
+    `${escapeHtml(best.set.name)} ` +
+    `(${escapeHtml(best.set.code.toUpperCase())}) ` +
+    `adds ${best.cards.length} cards for about ` +
+    `${escapeHtml(formatCurrency(best.cost))}.`;
 
   const button =
     document.createElement(
@@ -2315,58 +4060,24 @@ function updateNextRecommendation(
   button.type =
     "button";
 
+  button.textContent =
+    `Add ${best.set.code.toUpperCase()}`;
+
   button.style.marginTop =
     "10px";
-
-  button.textContent =
-    `Add ${bestSet.code.toUpperCase()}`;
 
   button.addEventListener(
     "click",
     () => {
-      if (
-        !selectedSetCodes.has(
-          bestSet.code
-        )
-      ) {
-        selectedSetCodes.add(
-          bestSet.code
-        );
-
-        selectedSetOrder.push(
-          bestSet.code
-        );
-      }
-
-      const checkbox =
-        document.querySelector(
-          `.set-select[data-set-code="${bestSet.code}"]`
-        );
-
-      if (checkbox) {
-        checkbox.checked =
-          true;
-      }
-
-      updateDeckBuilder();
+      toggleSetSelection(
+        best.set.code,
+        true
+      );
     }
   );
 
-  remainingRecommendation.appendChild(
-    title
-  );
-
-  remainingRecommendation.appendChild(
-    text
-  );
-
-  remainingRecommendation.appendChild(
-    document.createElement(
-      "br"
-    )
-  );
-
-  remainingRecommendation.appendChild(
+  remainingRecommendation.append(
+    text,
     button
   );
 
@@ -2376,23 +4087,376 @@ function updateNextRecommendation(
 }
 
 
+/* ============================================================
+   AUTOMATIC OPTIMIZATION
+   ============================================================ */
+
 /*
- * ------------------------------------------------------------
- * FINAL CARD ASSIGNMENT
- * ------------------------------------------------------------
+ * Greedy set cover:
+ * choose set adding most uncovered cards.
  */
+function optimizeFewestSets() {
+  if (
+    currentDeck.length ===
+    0
+  ) {
+    return;
+  }
+
+  clearPlanWithoutRender();
+
+  const uncovered =
+    new Set(
+      currentCardNames
+    );
+
+  while (
+    uncovered.size > 0
+  ) {
+    let best = null;
+
+    for (
+      const set
+      of currentRankedSets
+    ) {
+      if (
+        selectedSetCodes.has(
+          set.code
+        )
+      ) {
+        continue;
+      }
+
+      const newCards =
+        set.cards.filter(
+          card =>
+            uncovered.has(
+              card.name
+            )
+        );
+
+      if (
+        newCards.length ===
+        0
+      ) {
+        continue;
+      }
+
+      const cost =
+        calculateCardsCost(
+          newCards
+        );
+
+      if (
+        !best ||
+        newCards.length >
+          best.newCards.length ||
+        (
+          newCards.length ===
+            best.newCards.length &&
+          cost <
+            best.cost
+        )
+      ) {
+        best = {
+          set,
+          newCards,
+          cost
+        };
+      }
+    }
+
+    if (!best) {
+      break;
+    }
+
+    selectedSetCodes.add(
+      best.set.code
+    );
+
+    selectedSetOrder.push(
+      best.set.code
+    );
+
+    for (
+      const card
+      of best.newCards
+    ) {
+      uncovered.delete(
+        card.name
+      );
+    }
+  }
+
+  finishOptimization();
+}
+
+
+/*
+ * Lowest per-card printing cost.
+ *
+ * Select the set containing the cheapest
+ * allowed printing for each card, then
+ * manually assign that card to that set.
+ */
+function optimizeLowestCardCost() {
+  if (
+    currentDeck.length ===
+    0
+  ) {
+    return;
+  }
+
+  clearPlanWithoutRender();
+
+  for (
+    const deckCard
+    of currentDeck
+  ) {
+    let bestSet = null;
+    let bestCard = null;
+
+    for (
+      const set
+      of currentRankedSets
+    ) {
+      const card =
+        getCardFromSet(
+          set,
+          deckCard.name
+        );
+
+      if (
+        !card ||
+        card.price === null
+      ) {
+        continue;
+      }
+
+      if (
+        !bestCard ||
+        card.price <
+          bestCard.price
+      ) {
+        bestSet =
+          set;
+
+        bestCard =
+          card;
+      }
+    }
+
+    /*
+     * If no priced printing exists,
+     * at least choose the first set
+     * containing the card.
+     */
+    if (!bestSet) {
+      bestSet =
+        currentRankedSets.find(
+          set =>
+            getCardFromSet(
+              set,
+              deckCard.name
+            )
+        ) ||
+        null;
+    }
+
+    if (!bestSet) {
+      continue;
+    }
+
+    if (
+      !selectedSetCodes.has(
+        bestSet.code
+      )
+    ) {
+      selectedSetCodes.add(
+        bestSet.code
+      );
+
+      selectedSetOrder.push(
+        bestSet.code
+      );
+    }
+
+    manualAssignments.set(
+      deckCard.name,
+      bestSet.code
+    );
+  }
+
+  finishOptimization();
+}
+
+
+/*
+ * Greedy cost / newly covered card.
+ */
+function optimizeBestValue() {
+  if (
+    currentDeck.length ===
+    0
+  ) {
+    return;
+  }
+
+  clearPlanWithoutRender();
+
+  const uncovered =
+    new Set(
+      currentCardNames
+    );
+
+  while (
+    uncovered.size > 0
+  ) {
+    let best = null;
+
+    for (
+      const set
+      of currentRankedSets
+    ) {
+      if (
+        selectedSetCodes.has(
+          set.code
+        )
+      ) {
+        continue;
+      }
+
+      const cards =
+        set.cards.filter(
+          card =>
+            uncovered.has(
+              card.name
+            )
+        );
+
+      if (
+        cards.length ===
+        0
+      ) {
+        continue;
+      }
+
+      const cost =
+        calculateCardsCost(
+          cards
+        );
+
+      const ratio =
+        cost /
+        cards.length;
+
+      if (
+        !best ||
+        ratio <
+          best.ratio ||
+        (
+          ratio ===
+            best.ratio &&
+          cards.length >
+            best.cards.length
+        )
+      ) {
+        best = {
+          set,
+          cards,
+          cost,
+          ratio
+        };
+      }
+    }
+
+    if (!best) {
+      break;
+    }
+
+    selectedSetCodes.add(
+      best.set.code
+    );
+
+    selectedSetOrder.push(
+      best.set.code
+    );
+
+    for (
+      const card
+      of best.cards
+    ) {
+      uncovered.delete(
+        card.name
+      );
+    }
+  }
+
+  finishOptimization();
+}
+
+
+function calculateCardsCost(
+  cards
+) {
+  return cards.reduce(
+    (sum, card) =>
+      sum +
+      (
+        (
+          card.price ||
+          0
+        ) *
+        (
+          currentQuantityMap.get(
+            card.name
+          ) ||
+          1
+        )
+      ),
+    0
+  );
+}
+
+
+function clearPlanWithoutRender() {
+  selectedSetCodes.clear();
+
+  selectedSetOrder = [];
+
+  manualAssignments.clear();
+}
+
+
+function finishOptimization() {
+  saveState();
+
+  renderSetTable();
+
+  updateDeckBuilder();
+}
+
+
+/* ============================================================
+   FINAL ASSIGNMENT
+   ============================================================ */
 
 function renderFinalAssignment(
   result
 ) {
-  assignmentTableBody.innerHTML = "";
-  assignmentSetSummary.innerHTML = "";
+  assignmentTableBody.innerHTML =
+    "";
+
+  assignmentSetSummary.innerHTML =
+    "";
+
 
   /*
-   * Summary cards for each selected set.
+   * Per-set summary.
    */
   if (
-    result.selectedSets.length === 0
+    result.selectedSets.length ===
+    0
   ) {
     const empty =
       document.createElement(
@@ -2403,7 +4467,7 @@ function renderFinalAssignment(
       "assignment-set-card";
 
     empty.textContent =
-      "Select sets above to build the final card assignment.";
+      "Select or optimize sets to create a sourcing plan.";
 
     assignmentSetSummary.appendChild(
       empty
@@ -2413,23 +4477,23 @@ function renderFinalAssignment(
       const entry
       of result.selectedSets
     ) {
-      const summaryCard =
+      const box =
         document.createElement(
           "div"
         );
 
-      summaryCard.className =
+      box.className =
         "assignment-set-card";
 
-      const name =
+      const title =
         document.createElement(
           "div"
         );
 
-      name.className =
+      title.className =
         "assignment-set-name";
 
-      name.textContent =
+      title.textContent =
         `${entry.set.name} (${entry.set.code.toUpperCase()})`;
 
       const meta =
@@ -2440,36 +4504,41 @@ function renderFinalAssignment(
       meta.className =
         "assignment-set-meta";
 
+      const copyTotal =
+        entry.assignedCards.reduce(
+          (sum, card) =>
+            sum +
+            card.quantity,
+          0
+        );
+
       meta.textContent =
-        `${entry.newCards.length} cards assigned · ${formatCurrency(entry.contributionCost)}`;
+        `${entry.assignedCards.length} unique · ` +
+        `${copyTotal} copies · ` +
+        `${formatCurrency(entry.contributionCost)}`;
 
-      summaryCard.appendChild(
-        name
-      );
-
-      summaryCard.appendChild(
+      box.append(
+        title,
         meta
       );
 
       assignmentSetSummary.appendChild(
-        summaryCard
+        box
       );
     }
   }
 
+
   /*
-   * Build one row for EVERY card in the submitted list.
-   *
-   * That means the final table also clearly shows
-   * anything still uncovered.
+   * Card rows.
    */
   for (
-    const cardName
-    of currentCardNames
+    const deckCard
+    of currentDeck
   ) {
     const assignment =
       result.coveredCards.get(
-        cardName
+        deckCard.name
       );
 
     const row =
@@ -2477,40 +4546,38 @@ function renderFinalAssignment(
         "tr"
       );
 
-    /*
-     * Card name
-     */
-    const nameCell =
-      document.createElement(
-        "td"
+    if (!assignment) {
+      row.classList.add(
+        "uncovered-row"
       );
+    }
 
-    if (
-      assignment?.scryfallUri
-    ) {
-      const link =
-        document.createElement(
-          "a"
-        );
 
-      link.href =
-        assignment.scryfallUri;
+    /*
+     * Quantity
+     */
+    row.appendChild(
+      textCell(
+        deckCard.quantity
+      )
+    );
 
-      link.target =
-        "_blank";
 
-      link.rel =
-        "noopener noreferrer";
-
-      link.textContent =
-        cardName;
-
-      nameCell.appendChild(
-        link
+    /*
+     * Card
+     */
+    if (assignment) {
+      row.appendChild(
+        createCardLinkCell(
+          assignment
+        )
       );
     } else {
-      nameCell.textContent =
-        cardName;
+      row.appendChild(
+        textCell(
+          deckCard.name
+        )
+      );
     }
 
 
@@ -2518,167 +4585,178 @@ function renderFinalAssignment(
      * Status
      */
     const statusCell =
-      document.createElement(
-        "td"
+      textCell(
+        assignment
+          ? "Covered"
+          : "Not covered"
       );
 
-
-    /*
-     * Assigned set
-     */
-    const setNameCell =
-      document.createElement(
-        "td"
-      );
-
-
-    /*
-     * Set code
-     */
-    const setCodeCell =
-      document.createElement(
-        "td"
-      );
-
-
-    /*
-     * Price
-     */
-    const priceCell =
-      document.createElement(
-        "td"
-      );
-
-
-    /*
-     * Finish
-     */
-    const finishCell =
-      document.createElement(
-        "td"
-      );
-
-
-    /*
-     * Rarity
-     */
-    const rarityCell =
-      document.createElement(
-        "td"
-      );
-
-
-    /*
-     * Collector number
-     */
-    const collectorCell =
-      document.createElement(
-        "td"
-      );
-
-
-    if (assignment) {
-      statusCell.textContent =
-        "Covered";
-
-      statusCell.className =
-        "assignment-covered";
-
-      setNameCell.textContent =
-        assignment.sourceSetName;
-
-      setCodeCell.textContent =
-        assignment.sourceSet.toUpperCase();
-
-      setCodeCell.className =
-        "set-code";
-
-      priceCell.textContent =
-        formatCurrency(
-          assignment.price
-        );
-
-      if (
-        assignment.price !== null &&
-        assignment.price >=
-          EXPENSIVE_THRESHOLD
-      ) {
-        priceCell.classList.add(
-          "expensive-price"
-        );
-      }
-
-      finishCell.textContent =
-        assignment.finish ||
-        "N/A";
-
-      rarityCell.textContent =
-        assignment.rarity ||
-        "N/A";
-
-      collectorCell.textContent =
-        assignment.collectorNumber ||
-        "N/A";
-    } else {
-      row.classList.add(
-        "uncovered-row"
-      );
-
-      statusCell.textContent =
-        "Not covered";
-
-      statusCell.className =
-        "assignment-uncovered";
-
-      setNameCell.textContent =
-        "—";
-
-      setCodeCell.textContent =
-        "—";
-
-      priceCell.textContent =
-        "—";
-
-      finishCell.textContent =
-        "—";
-
-      rarityCell.textContent =
-        "—";
-
-      collectorCell.textContent =
-        "—";
-    }
-
-    row.appendChild(
-      nameCell
-    );
+    statusCell.className =
+      assignment
+        ? "assignment-covered"
+        : "assignment-uncovered";
 
     row.appendChild(
       statusCell
     );
 
+
+    /*
+     * Manual assignment dropdown.
+     */
+    const assignedSetCell =
+      document.createElement(
+        "td"
+      );
+
+    if (assignment) {
+      const eligible =
+        getEligibleSelectedSetsForCard(
+          deckCard.name
+        );
+
+      if (
+        eligible.length > 1
+      ) {
+        const select =
+          document.createElement(
+            "select"
+          );
+
+        select.className =
+          "assignment-select";
+
+        for (
+          const set
+          of eligible
+        ) {
+          const option =
+            document.createElement(
+              "option"
+            );
+
+          option.value =
+            set.code;
+
+          option.textContent =
+            `${set.name} (${set.code.toUpperCase()})`;
+
+          option.selected =
+            set.code ===
+            assignment.sourceSet;
+
+          select.appendChild(
+            option
+          );
+        }
+
+        select.addEventListener(
+          "change",
+          () => {
+            manualAssignments.set(
+              deckCard.name,
+              select.value
+            );
+
+            saveState();
+
+            updateDeckBuilder();
+          }
+        );
+
+        assignedSetCell.appendChild(
+          select
+        );
+      } else {
+        assignedSetCell.textContent =
+          assignment.sourceSetName;
+      }
+    } else {
+      assignedSetCell.textContent =
+        "—";
+    }
+
     row.appendChild(
-      setNameCell
+      assignedSetCell
+    );
+
+
+    /*
+     * Code
+     */
+    row.appendChild(
+      textCell(
+        assignment
+          ? assignment.sourceSet
+              .toUpperCase()
+          : "—"
+      )
+    );
+
+
+    /*
+     * Price each
+     */
+    const eachCell =
+      textCell(
+        assignment
+          ? formatCurrency(
+              assignment.price
+            )
+          : "—"
+      );
+
+    if (
+      assignment?.price >=
+      EXPENSIVE_THRESHOLD
+    ) {
+      eachCell.classList.add(
+        "expensive-price"
+      );
+    }
+
+    row.appendChild(
+      eachCell
+    );
+
+
+    /*
+     * Line total
+     */
+    row.appendChild(
+      textCell(
+        assignment?.price !==
+        null &&
+        assignment?.price !==
+        undefined
+          ? formatCurrency(
+              assignment.price *
+              deckCard.quantity
+            )
+          : "—"
+      )
+    );
+
+
+    row.appendChild(
+      textCell(
+        assignment?.finish ||
+        "—"
+      )
     );
 
     row.appendChild(
-      setCodeCell
+      textCell(
+        assignment?.rarity ||
+        "—"
+      )
     );
 
     row.appendChild(
-      priceCell
-    );
-
-    row.appendChild(
-      finishCell
-    );
-
-    row.appendChild(
-      rarityCell
-    );
-
-    row.appendChild(
-      collectorCell
+      textCell(
+        assignment?.collectorNumber ||
+        "—"
+      )
     );
 
     assignmentTableBody.appendChild(
@@ -2688,20 +4766,430 @@ function renderFinalAssignment(
 }
 
 
-/*
- * ------------------------------------------------------------
- * Unmatched cards
- * ------------------------------------------------------------
- */
+/* ============================================================
+   EXPORT
+   ============================================================ */
 
-function renderUnmatchedCards(
-  unmatchedCards
+function exportCsv() {
+  if (
+    currentDeck.length ===
+    0
+  ) {
+    return;
+  }
+
+  const result =
+    calculateSelectedCoverage();
+
+  const rows = [
+    [
+      "Quantity",
+      "Card",
+      "Status",
+      "Assigned Set",
+      "Set Code",
+      "Price Each",
+      "Line Total",
+      "Finish",
+      "Rarity",
+      "Collector Number",
+      "Scryfall URL"
+    ]
+  ];
+
+  for (
+    const deckCard
+    of currentDeck
+  ) {
+    const card =
+      result.coveredCards.get(
+        deckCard.name
+      );
+
+    rows.push([
+      deckCard.quantity,
+
+      deckCard.name,
+
+      card
+        ? "Covered"
+        : "Not covered",
+
+      card?.sourceSetName ||
+        "",
+
+      card?.sourceSet
+        ?.toUpperCase() ||
+        "",
+
+      card?.price ??
+        "",
+
+      card?.price !==
+        null &&
+      card?.price !==
+        undefined
+        ? (
+            card.price *
+            deckCard.quantity
+          ).toFixed(2)
+        : "",
+
+      card?.finish ||
+        "",
+
+      card?.rarity ||
+        "",
+
+      card?.collectorNumber ||
+        "",
+
+      card?.scryfallUri ||
+        ""
+    ]);
+  }
+
+  const csv =
+    rows
+      .map(
+        row =>
+          row
+            .map(
+              csvEscape
+            )
+            .join(",")
+      )
+      .join("\r\n");
+
+  downloadTextFile(
+    "mtg-set-plan.csv",
+    csv,
+    "text/csv;charset=utf-8"
+  );
+}
+
+
+function exportText() {
+  if (
+    currentDeck.length ===
+    0
+  ) {
+    return;
+  }
+
+  const result =
+    calculateSelectedCoverage();
+
+  const lines = [];
+
+  lines.push(
+    "MTG SET FINDER PLAN"
+  );
+
+  lines.push(
+    "==================="
+  );
+
+  lines.push("");
+
+  lines.push(
+    `Selected sets: ${selectedSetOrder.length}`
+  );
+
+  lines.push(
+    `Covered: ${result.coveredCards.size}/${currentDeck.length}`
+  );
+
+  lines.push(
+    `Estimated cost: ${formatCurrency(result.totalCost)}`
+  );
+
+  lines.push("");
+
+  for (
+    const entry
+    of result.selectedSets
+  ) {
+    lines.push(
+      `${entry.set.name} (${entry.set.code.toUpperCase()})`
+    );
+
+    lines.push(
+      "-".repeat(
+        Math.min(
+          60,
+          entry.set.name.length +
+          10
+        )
+      )
+    );
+
+    for (
+      const card
+      of entry.assignedCards
+    ) {
+      const quantity =
+        card.quantity > 1
+          ? `${card.quantity}x `
+          : "";
+
+      lines.push(
+        `${quantity}${card.name} — ${formatCurrency(card.price)} — ${card.finish || "N/A"} — #${card.collectorNumber || "N/A"}`
+      );
+    }
+
+    lines.push("");
+  }
+
+  if (
+    result.remainingCards.length >
+    0
+  ) {
+    lines.push(
+      "NOT COVERED"
+    );
+
+    lines.push(
+      "-----------"
+    );
+
+    for (
+      const card
+      of result.remainingCards
+    ) {
+      lines.push(
+        `${card.quantity}x ${card.name}`
+      );
+    }
+
+    lines.push("");
+  }
+
+  downloadTextFile(
+    "mtg-set-plan.txt",
+    lines.join("\n"),
+    "text/plain;charset=utf-8"
+  );
+}
+
+
+function csvEscape(
+  value
 ) {
+  const text =
+    String(
+      value ??
+      ""
+    );
+
+  if (
+    /[",\r\n]/.test(
+      text
+    )
+  ) {
+    return (
+      '"' +
+      text.replaceAll(
+        '"',
+        '""'
+      ) +
+      '"'
+    );
+  }
+
+  return text;
+}
+
+
+function downloadTextFile(
+  filename,
+  content,
+  type
+) {
+  const blob =
+    new Blob(
+      [content],
+      {
+        type
+      }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    url;
+
+  link.download =
+    filename;
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+
+  link.remove();
+
+  setTimeout(
+    () =>
+      URL.revokeObjectURL(
+        url
+      ),
+    1000
+  );
+}
+
+
+/* ============================================================
+   IMAGE HOVER PREVIEW
+   ============================================================ */
+
+function installImagePreviewHandlers() {
+  document.addEventListener(
+    "mouseover",
+    event => {
+      const target =
+        event.target.closest(
+          "[data-card-image]"
+        );
+
+      if (!target) {
+        return;
+      }
+
+      const url =
+        target.dataset.cardImage;
+
+      if (!url) {
+        return;
+      }
+
+      previewImage.src =
+        url;
+
+      imagePreview.classList.add(
+        "visible"
+      );
+
+      positionImagePreview(
+        event
+      );
+    }
+  );
+
+  document.addEventListener(
+    "mousemove",
+    event => {
+      if (
+        imagePreview.classList.contains(
+          "visible"
+        )
+      ) {
+        positionImagePreview(
+          event
+        );
+      }
+    }
+  );
+
+  document.addEventListener(
+    "mouseout",
+    event => {
+      const target =
+        event.target.closest(
+          "[data-card-image]"
+        );
+
+      if (!target) {
+        return;
+      }
+
+      imagePreview.classList.remove(
+        "visible"
+      );
+
+      previewImage.removeAttribute(
+        "src"
+      );
+    }
+  );
+}
+
+
+function positionImagePreview(
+  event
+) {
+  const padding = 18;
+
+  const width =
+    260;
+
+  const height =
+    360;
+
+  let left =
+    event.clientX +
+    padding;
+
+  let top =
+    event.clientY +
+    padding;
+
+  if (
+    left +
+      width >
+    window.innerWidth
+  ) {
+    left =
+      event.clientX -
+      width -
+      padding;
+  }
+
+  if (
+    top +
+      height >
+    window.innerHeight
+  ) {
+    top =
+      window.innerHeight -
+      height -
+      padding;
+  }
+
+  imagePreview.style.left =
+    `${Math.max(
+      padding,
+      left
+    )}px`;
+
+  imagePreview.style.top =
+    `${Math.max(
+      padding,
+      top
+    )}px`;
+}
+
+
+/* ============================================================
+   UNMATCHED
+   ============================================================ */
+
+function renderUnmatchedCards() {
   unmatchedCardsList.innerHTML =
     "";
 
   if (
-    unmatchedCards.length === 0
+    currentUnmatchedCards.length ===
+    0
   ) {
     unmatchedArea.classList.add(
       "hidden"
@@ -2711,19 +5199,19 @@ function renderUnmatchedCards(
   }
 
   for (
-    const cardName
-    of unmatchedCards
+    const name
+    of currentUnmatchedCards
   ) {
-    const item =
+    const li =
       document.createElement(
         "li"
       );
 
-    item.textContent =
-      cardName;
+    li.textContent =
+      name;
 
     unmatchedCardsList.appendChild(
-      item
+      li
     );
   }
 
@@ -2733,14 +5221,46 @@ function renderUnmatchedCards(
 }
 
 
-/*
- * ------------------------------------------------------------
- * UI helpers
- * ------------------------------------------------------------
- */
+/* ============================================================
+   CLEAR
+   ============================================================ */
 
-function resetResults() {
-  setResults.innerHTML = "";
+function clearDeck() {
+  if (
+    isRunning ||
+    isImportingBulk
+  ) {
+    return;
+  }
+
+  cardInput.value =
+    "";
+
+  currentDeck = [];
+  currentCardNames = [];
+
+  currentQuantityMap =
+    new Map();
+
+  currentRankedSets = [];
+  currentUnmatchedCards = [];
+
+  selectedSetCodes.clear();
+
+  selectedSetOrder = [];
+
+  manualAssignments.clear();
+
+  resultsSection.classList.add(
+    "hidden"
+  );
+
+  progressArea.classList.add(
+    "hidden"
+  );
+
+  setResults.innerHTML =
+    "";
 
   assignmentTableBody.innerHTML =
     "";
@@ -2748,53 +5268,211 @@ function resetResults() {
   assignmentSetSummary.innerHTML =
     "";
 
-  bestSet.classList.add(
-    "hidden"
-  );
-
-  unmatchedArea.classList.add(
-    "hidden"
-  );
-
-  bestSetName.textContent = "";
-  bestSetStats.textContent = "";
-
   cardCount.textContent =
-    currentCardNames.length;
+    "0";
 
-  setCount.textContent = "0";
-  unmatchedCount.textContent = "0";
+  copyCount.textContent =
+    "0";
 
-  progressBarFill.style.width =
-    "0%";
+  setCount.textContent =
+    "0";
 
-  updateDeckBuilder();
+  unmatchedCount.textContent =
+    "0";
+
+  saveState();
 }
 
 
-function updateProgress(
-  current,
-  total,
-  message
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+
+function createCardLinkCell(
+  card
 ) {
-  statusMessage.textContent =
-    message;
+  const td =
+    document.createElement(
+      "td"
+    );
 
-  const percentage =
-    total === 0
-      ? 0
-      : Math.round(
-          current /
-          total *
-          100
-        );
+  if (
+    card.scryfallUri
+  ) {
+    const link =
+      document.createElement(
+        "a"
+      );
 
-  progressBarFill.style.width =
-    `${percentage}%`;
+    link.href =
+      card.scryfallUri;
+
+    link.target =
+      "_blank";
+
+    link.rel =
+      "noopener noreferrer";
+
+    link.textContent =
+      card.name;
+
+    if (
+      card.imageNormal ||
+      card.imageSmall
+    ) {
+      link.dataset.cardImage =
+        card.imageNormal ||
+        card.imageSmall;
+
+      link.classList.add(
+        "card-preview-link"
+      );
+    }
+
+    td.appendChild(
+      link
+    );
+  } else {
+    td.textContent =
+      card.name;
+  }
+
+  return td;
 }
 
 
-function delay(ms) {
+function textCell(
+  value
+) {
+  const td =
+    document.createElement(
+      "td"
+    );
+
+  td.textContent =
+    String(
+      value ??
+      ""
+    );
+
+  return td;
+}
+
+
+function formatCurrency(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(
+      Number(value)
+    )
+  ) {
+    return "N/A";
+  }
+
+  return Number(
+    value
+  ).toLocaleString(
+    "en-US",
+    {
+      style:
+        "currency",
+
+      currency:
+        "USD"
+    }
+  );
+}
+
+
+function formatNumber(
+  value
+) {
+  return Number(
+    value ||
+    0
+  ).toLocaleString(
+    "en-US"
+  );
+}
+
+
+function formatDateTime(
+  value
+) {
+  if (!value) {
+    return "unknown";
+  }
+
+  const date =
+    new Date(
+      value
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return value;
+  }
+
+  return date.toLocaleString();
+}
+
+
+function prettifySetType(
+  type
+) {
+  return String(
+    type
+  )
+    .replaceAll(
+      "_",
+      " "
+    )
+    .replace(
+      /\b\w/g,
+      char =>
+        char.toUpperCase()
+    );
+}
+
+
+function escapeHtml(
+  value
+) {
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+}
+
+
+function sleep(
+  ms
+) {
   return new Promise(
     resolve =>
       setTimeout(
@@ -2802,4 +5480,27 @@ function delay(ms) {
         ms
       )
   );
+}
+
+
+function debounce(
+  fn,
+  delay
+) {
+  let timer = null;
+
+  return (
+    ...args
+  ) => {
+    clearTimeout(
+      timer
+    );
+
+    timer =
+      setTimeout(
+        () =>
+          fn(...args),
+        delay
+      );
+  };
 }
