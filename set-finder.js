@@ -85,6 +85,12 @@ const remainingCardsList =
 const remainingRecommendation =
   document.getElementById("remainingRecommendation");
 
+const assignmentSetSummary =
+  document.getElementById("assignmentSetSummary");
+
+const assignmentTableBody =
+  document.getElementById("assignmentTableBody");
+
 
 const SCRYFALL_DELAY_MS = 550;
 const EXPENSIVE_THRESHOLD = 25;
@@ -94,9 +100,19 @@ let isRunning = false;
 
 let currentRankedSets = [];
 let currentCardNames = [];
+let currentUnmatchedCards = [];
 
+/*
+ * Set keeps fast membership lookup.
+ */
 const selectedSetCodes =
   new Set();
+
+/*
+ * Array preserves the exact order in which
+ * the user selected the sets.
+ */
+let selectedSetOrder = [];
 
 
 /*
@@ -122,10 +138,14 @@ clearButton.addEventListener(
 
     currentRankedSets = [];
     currentCardNames = [];
+    currentUnmatchedCards = [];
 
     selectedSetCodes.clear();
+    selectedSetOrder = [];
 
     setResults.innerHTML = "";
+    assignmentTableBody.innerHTML = "";
+    assignmentSetSummary.innerHTML = "";
 
     resultsSection.classList.add(
       "hidden"
@@ -162,6 +182,7 @@ clearSetsButton.addEventListener(
   "click",
   () => {
     selectedSetCodes.clear();
+    selectedSetOrder = [];
 
     document
       .querySelectorAll(".set-select")
@@ -204,8 +225,10 @@ async function analyzeCards() {
     cardNames;
 
   currentRankedSets = [];
+  currentUnmatchedCards = [];
 
   selectedSetCodes.clear();
+  selectedSetOrder = [];
 
   isRunning = true;
 
@@ -297,6 +320,9 @@ async function analyzeCards() {
     currentRankedSets =
       rankedSets;
 
+    currentUnmatchedCards =
+      unmatchedCards;
+
     renderResults(
       rankedSets,
       cardNames.length,
@@ -327,7 +353,7 @@ async function analyzeCards() {
 
 /*
  * ------------------------------------------------------------
- * Parse ManaBox / deck list
+ * Parse ManaBox list
  * ------------------------------------------------------------
  */
 
@@ -352,7 +378,7 @@ function parseManaBoxList(text) {
     }
 
     /*
-     * Remove quantity:
+     * Examples:
      *
      * 1 Sol Ring
      * 4 Counterspell
@@ -365,10 +391,10 @@ function parseManaBoxList(text) {
       );
 
     /*
-     * Remove:
+     * Examples:
      *
-     * (CMM) 396
-     * (DMR) 45
+     * Sol Ring (CMM) 396
+     * Counterspell (DMR) 45
      */
     line =
       line.replace(
@@ -377,7 +403,7 @@ function parseManaBoxList(text) {
       );
 
     /*
-     * Remove foil markers.
+     * ManaBox-style foil markers.
      */
     line =
       line.replace(
@@ -503,7 +529,7 @@ async function getPrintings(
 
 /*
  * ------------------------------------------------------------
- * Prices
+ * Pricing
  * ------------------------------------------------------------
  */
 
@@ -606,7 +632,7 @@ function formatCurrency(value) {
 
 /*
  * ------------------------------------------------------------
- * Build set/card relationships
+ * Build sets
  * ------------------------------------------------------------
  */
 
@@ -625,8 +651,8 @@ function addPrintingsToSets(
     excludePromosCheckbox.checked;
 
   /*
-   * For each set, choose the cheapest
-   * printing of this card.
+   * One chosen printing for this card
+   * per set.
    */
   const bestPrintingPerSet =
     new Map();
@@ -689,6 +715,10 @@ function addPrintingsToSets(
       continue;
     }
 
+    /*
+     * Prefer priced printing over
+     * unpriced printing.
+     */
     if (
       !existing.priceInfo &&
       priceInfo
@@ -704,6 +734,10 @@ function addPrintingsToSets(
       continue;
     }
 
+    /*
+     * If both have prices,
+     * choose the cheaper one.
+     */
     if (
       existing.priceInfo &&
       priceInfo &&
@@ -816,7 +850,7 @@ function isSecretLairPrinting(
 
 /*
  * ------------------------------------------------------------
- * Ranking
+ * Rank sets
  * ------------------------------------------------------------
  */
 
@@ -951,7 +985,7 @@ function rankSets(
 
 /*
  * ------------------------------------------------------------
- * Main result rendering
+ * Results
  * ------------------------------------------------------------
  */
 
@@ -1043,7 +1077,7 @@ function renderResults(
 
 
       /*
-       * SET NAME
+       * SET
        */
       const nameCell =
         document.createElement(
@@ -1177,8 +1211,8 @@ function renderResults(
       );
 
       if (
-        set.expensiveCards
-          .length > 0
+        set.expensiveCards.length >
+        0
       ) {
         const expensiveBox =
           document.createElement(
@@ -1480,8 +1514,7 @@ function renderBestSet(
   bestSetName.textContent =
     `${set.name} (${set.code.toUpperCase()})`;
 
-  bestSetStats.innerHTML =
-    "";
+  bestSetStats.innerHTML = "";
 
   const coverageLine =
     document.createElement(
@@ -1524,8 +1557,8 @@ function renderBestSet(
   }
 
   if (
-    set.mostExpensive
-      .length > 0
+    set.mostExpensive.length >
+    0
   ) {
     const title =
       document.createElement(
@@ -1574,7 +1607,7 @@ function renderBestSet(
 
 /*
  * ------------------------------------------------------------
- * Set selection / coverage
+ * Selection order
  * ------------------------------------------------------------
  */
 
@@ -1583,18 +1616,56 @@ function toggleSetSelection(
   selected
 ) {
   if (selected) {
-    selectedSetCodes.add(
-      setCode
-    );
+    if (
+      !selectedSetCodes.has(
+        setCode
+      )
+    ) {
+      selectedSetCodes.add(
+        setCode
+      );
+
+      selectedSetOrder.push(
+        setCode
+      );
+    }
   } else {
     selectedSetCodes.delete(
       setCode
     );
+
+    selectedSetOrder =
+      selectedSetOrder.filter(
+        code =>
+          code !== setCode
+      );
   }
 
   updateDeckBuilder();
 }
 
+
+/*
+ * ------------------------------------------------------------
+ * Find set
+ * ------------------------------------------------------------
+ */
+
+function getSetByCode(
+  setCode
+) {
+  return currentRankedSets.find(
+    set =>
+      set.code === setCode
+  ) || null;
+}
+
+
+/*
+ * ------------------------------------------------------------
+ * Coverage
+ * ------------------------------------------------------------
+ */
 
 function calculateSelectedCoverage() {
   const coveredCards =
@@ -1605,20 +1676,21 @@ function calculateSelectedCoverage() {
   let totalCost = 0;
 
   /*
-   * Process in ranking order.
+   * IMPORTANT:
    *
-   * The first selected set that covers a card
-   * becomes the source for that card.
+   * Process sets in user selection order,
+   * not ranking order.
    */
   for (
-    const set
-    of currentRankedSets
+    const setCode
+    of selectedSetOrder
   ) {
-    if (
-      !selectedSetCodes.has(
-        set.code
-      )
-    ) {
+    const set =
+      getSetByCode(
+        setCode
+      );
+
+    if (!set) {
       continue;
     }
 
@@ -1643,17 +1715,23 @@ function calculateSelectedCoverage() {
         continue;
       }
 
+      const assignment = {
+        ...card,
+
+        sourceSet:
+          set.code,
+
+        sourceSetName:
+          set.name
+      };
+
       coveredCards.set(
         card.name,
-        {
-          ...card,
-          sourceSet:
-            set.code
-        }
+        assignment
       );
 
       newCards.push(
-        card
+        assignment
       );
 
       if (
@@ -1692,6 +1770,12 @@ function calculateSelectedCoverage() {
 }
 
 
+/*
+ * ------------------------------------------------------------
+ * Main builder refresh
+ * ------------------------------------------------------------
+ */
+
 function updateDeckBuilder() {
   const result =
     calculateSelectedCoverage();
@@ -1706,7 +1790,7 @@ function updateDeckBuilder() {
     result.remainingCards.length;
 
   selectedSetCount.textContent =
-    selectedSetCodes.size;
+    selectedSetOrder.length;
 
   coveredCardCount.textContent =
     `${covered} / ${totalCards}`;
@@ -1749,20 +1833,27 @@ function updateDeckBuilder() {
   updateNextRecommendation(
     result.remainingCards
   );
+
+  /*
+   * NEW:
+   * Build the complete final assignment.
+   */
+  renderFinalAssignment(
+    result
+  );
 }
 
 
 /*
  * ------------------------------------------------------------
- * Selected set plan
+ * Selected sets
  * ------------------------------------------------------------
  */
 
 function renderSelectedSets(
   selectedSets
 ) {
-  selectedSetsList.innerHTML =
-    "";
+  selectedSetsList.innerHTML = "";
 
   if (
     selectedSets.length === 0
@@ -1832,6 +1923,13 @@ function renderSelectedSets(
             entry.set.code
           );
 
+          selectedSetOrder =
+            selectedSetOrder.filter(
+              code =>
+                code !==
+                entry.set.code
+            );
+
           const checkbox =
             document.querySelector(
               `.set-select[data-set-code="${entry.set.code}"]`
@@ -1871,7 +1969,7 @@ function renderSelectedSets(
         "new-card-count";
 
       newCount.textContent =
-        `${entry.newCards.length} new cards`;
+        `${entry.newCards.length} assigned cards`;
 
       const duplicateCount =
         document.createElement(
@@ -1890,7 +1988,7 @@ function renderSelectedSets(
         );
 
       cost.textContent =
-        ` · ${formatCurrency(entry.contributionCost)} contribution`;
+        ` · ${formatCurrency(entry.contributionCost)} assigned value`;
 
       meta.appendChild(
         newCount
@@ -2017,7 +2115,7 @@ function renderRemainingCards(
 
 /*
  * ------------------------------------------------------------
- * Dynamic "new cards" column
+ * New-card counts
  * ------------------------------------------------------------
  */
 
@@ -2158,9 +2256,8 @@ function updateNextRecommendation(
     }
 
     /*
-     * Tie-break:
-     * same number of new cards,
-     * cheaper contribution wins.
+     * Same coverage:
+     * choose lower estimated contribution cost.
      */
     if (
       newCards.length ===
@@ -2227,9 +2324,19 @@ function updateNextRecommendation(
   button.addEventListener(
     "click",
     () => {
-      selectedSetCodes.add(
-        bestSet.code
-      );
+      if (
+        !selectedSetCodes.has(
+          bestSet.code
+        )
+      ) {
+        selectedSetCodes.add(
+          bestSet.code
+        );
+
+        selectedSetOrder.push(
+          bestSet.code
+        );
+      }
 
       const checkbox =
         document.querySelector(
@@ -2271,7 +2378,319 @@ function updateNextRecommendation(
 
 /*
  * ------------------------------------------------------------
- * Unmatched
+ * FINAL CARD ASSIGNMENT
+ * ------------------------------------------------------------
+ */
+
+function renderFinalAssignment(
+  result
+) {
+  assignmentTableBody.innerHTML = "";
+  assignmentSetSummary.innerHTML = "";
+
+  /*
+   * Summary cards for each selected set.
+   */
+  if (
+    result.selectedSets.length === 0
+  ) {
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+    empty.className =
+      "assignment-set-card";
+
+    empty.textContent =
+      "Select sets above to build the final card assignment.";
+
+    assignmentSetSummary.appendChild(
+      empty
+    );
+  } else {
+    for (
+      const entry
+      of result.selectedSets
+    ) {
+      const summaryCard =
+        document.createElement(
+          "div"
+        );
+
+      summaryCard.className =
+        "assignment-set-card";
+
+      const name =
+        document.createElement(
+          "div"
+        );
+
+      name.className =
+        "assignment-set-name";
+
+      name.textContent =
+        `${entry.set.name} (${entry.set.code.toUpperCase()})`;
+
+      const meta =
+        document.createElement(
+          "div"
+        );
+
+      meta.className =
+        "assignment-set-meta";
+
+      meta.textContent =
+        `${entry.newCards.length} cards assigned · ${formatCurrency(entry.contributionCost)}`;
+
+      summaryCard.appendChild(
+        name
+      );
+
+      summaryCard.appendChild(
+        meta
+      );
+
+      assignmentSetSummary.appendChild(
+        summaryCard
+      );
+    }
+  }
+
+  /*
+   * Build one row for EVERY card in the submitted list.
+   *
+   * That means the final table also clearly shows
+   * anything still uncovered.
+   */
+  for (
+    const cardName
+    of currentCardNames
+  ) {
+    const assignment =
+      result.coveredCards.get(
+        cardName
+      );
+
+    const row =
+      document.createElement(
+        "tr"
+      );
+
+    /*
+     * Card name
+     */
+    const nameCell =
+      document.createElement(
+        "td"
+      );
+
+    if (
+      assignment?.scryfallUri
+    ) {
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      link.href =
+        assignment.scryfallUri;
+
+      link.target =
+        "_blank";
+
+      link.rel =
+        "noopener noreferrer";
+
+      link.textContent =
+        cardName;
+
+      nameCell.appendChild(
+        link
+      );
+    } else {
+      nameCell.textContent =
+        cardName;
+    }
+
+
+    /*
+     * Status
+     */
+    const statusCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Assigned set
+     */
+    const setNameCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Set code
+     */
+    const setCodeCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Price
+     */
+    const priceCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Finish
+     */
+    const finishCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Rarity
+     */
+    const rarityCell =
+      document.createElement(
+        "td"
+      );
+
+
+    /*
+     * Collector number
+     */
+    const collectorCell =
+      document.createElement(
+        "td"
+      );
+
+
+    if (assignment) {
+      statusCell.textContent =
+        "Covered";
+
+      statusCell.className =
+        "assignment-covered";
+
+      setNameCell.textContent =
+        assignment.sourceSetName;
+
+      setCodeCell.textContent =
+        assignment.sourceSet.toUpperCase();
+
+      setCodeCell.className =
+        "set-code";
+
+      priceCell.textContent =
+        formatCurrency(
+          assignment.price
+        );
+
+      if (
+        assignment.price !== null &&
+        assignment.price >=
+          EXPENSIVE_THRESHOLD
+      ) {
+        priceCell.classList.add(
+          "expensive-price"
+        );
+      }
+
+      finishCell.textContent =
+        assignment.finish ||
+        "N/A";
+
+      rarityCell.textContent =
+        assignment.rarity ||
+        "N/A";
+
+      collectorCell.textContent =
+        assignment.collectorNumber ||
+        "N/A";
+    } else {
+      row.classList.add(
+        "uncovered-row"
+      );
+
+      statusCell.textContent =
+        "Not covered";
+
+      statusCell.className =
+        "assignment-uncovered";
+
+      setNameCell.textContent =
+        "—";
+
+      setCodeCell.textContent =
+        "—";
+
+      priceCell.textContent =
+        "—";
+
+      finishCell.textContent =
+        "—";
+
+      rarityCell.textContent =
+        "—";
+
+      collectorCell.textContent =
+        "—";
+    }
+
+    row.appendChild(
+      nameCell
+    );
+
+    row.appendChild(
+      statusCell
+    );
+
+    row.appendChild(
+      setNameCell
+    );
+
+    row.appendChild(
+      setCodeCell
+    );
+
+    row.appendChild(
+      priceCell
+    );
+
+    row.appendChild(
+      finishCell
+    );
+
+    row.appendChild(
+      rarityCell
+    );
+
+    row.appendChild(
+      collectorCell
+    );
+
+    assignmentTableBody.appendChild(
+      row
+    );
+  }
+}
+
+
+/*
+ * ------------------------------------------------------------
+ * Unmatched cards
  * ------------------------------------------------------------
  */
 
@@ -2322,6 +2741,12 @@ function renderUnmatchedCards(
 
 function resetResults() {
   setResults.innerHTML = "";
+
+  assignmentTableBody.innerHTML =
+    "";
+
+  assignmentSetSummary.innerHTML =
+    "";
 
   bestSet.classList.add(
     "hidden"

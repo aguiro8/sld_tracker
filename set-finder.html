@@ -24,11 +24,9 @@
       .finder-card {
         margin-top: 18px;
         padding: 18px 20px 20px;
-
         background: rgba(15, 23, 42, 0.9);
         border: 1px solid var(--border);
         border-radius: 16px;
-
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
       }
 
@@ -44,12 +42,9 @@
         min-height: 300px;
         margin-top: 10px;
         padding: 12px 14px;
-
         resize: vertical;
-
         border: 1px solid var(--border);
         border-radius: 10px;
-
         background: var(--panel-alt);
         color: var(--text);
 
@@ -86,7 +81,6 @@
         display: inline-flex;
         align-items: center;
         gap: 7px;
-
         color: var(--muted);
         font-size: 0.9rem;
         cursor: pointer;
@@ -111,9 +105,7 @@
         width: 100%;
         height: 12px;
         margin-top: 8px;
-
         overflow: hidden;
-
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 999px;
@@ -129,10 +121,8 @@
       .best-set {
         margin-bottom: 16px;
         padding: 14px;
-
         border: 1px solid var(--border);
         border-radius: 12px;
-
         background: rgba(56, 189, 248, 0.08);
       }
 
@@ -142,7 +132,6 @@
 
       .best-set-name {
         margin-top: 6px;
-
         color: var(--accent);
         font-size: 1.35rem;
         font-weight: 700;
@@ -171,10 +160,8 @@
       .expensive-box {
         margin: 12px 0;
         padding: 12px;
-
         border: 1px solid rgba(248, 113, 113, 0.35);
         border-radius: 10px;
-
         background: rgba(127, 29, 29, 0.22);
       }
 
@@ -194,7 +181,6 @@
       .inner-card-table {
         width: 100%;
         margin-top: 12px;
-
         border-collapse: collapse;
         background: transparent;
       }
@@ -222,10 +208,8 @@
       .error-list {
         margin-top: 18px;
         padding: 14px;
-
         border: 1px solid var(--border);
         border-radius: 12px;
-
         background: rgba(248, 113, 113, 0.06);
       }
 
@@ -280,9 +264,7 @@
       .coverage-bar {
         width: 100%;
         height: 18px;
-
         overflow: hidden;
-
         background: var(--panel-alt);
         border: 1px solid var(--border);
         border-radius: 999px;
@@ -311,7 +293,6 @@
 
       .builder-panel {
         padding: 16px;
-
         background: rgba(15, 23, 42, 0.55);
         border: 1px solid var(--border);
         border-radius: 12px;
@@ -334,6 +315,7 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
+        align-items: center;
       }
 
       .selected-set-name {
@@ -364,7 +346,6 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-
         padding: 7px 0;
         border-bottom: 1px solid var(--border);
       }
@@ -376,7 +357,6 @@
       .next-recommendation {
         margin-bottom: 14px;
         padding: 12px;
-
         background: rgba(56, 189, 248, 0.08);
         border: 1px solid rgba(56, 189, 248, 0.25);
         border-radius: 10px;
@@ -399,14 +379,71 @@
 
       .complete-message {
         padding: 16px;
-
         text-align: center;
         color: var(--accent);
-
         border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 10px;
-
         background: rgba(56, 189, 248, 0.08);
+      }
+
+      /*
+       * Final assignment
+       */
+
+      .final-summary {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      .final-summary-header {
+        margin-bottom: 14px;
+      }
+
+      .final-summary-header h2 {
+        margin: 0 0 5px;
+      }
+
+      .final-summary-header p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .assignment-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .assignment-set-card {
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(56, 189, 248, 0.06);
+      }
+
+      .assignment-set-name {
+        font-weight: 700;
+      }
+
+      .assignment-set-meta {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .final-assignment-table .uncovered-row td {
+        background: rgba(248, 113, 113, 0.06);
+      }
+
+      .assignment-uncovered {
+        color: #fca5a5;
+        font-weight: 600;
+      }
+
+      .assignment-covered {
+        color: var(--accent);
       }
 
       @media (max-width: 780px) {
@@ -431,6 +468,10 @@
         .builder-columns {
           grid-template-columns: 1fr;
         }
+
+        .final-assignment-table {
+          min-width: 800px;
+        }
       }
     </style>
   </head>
@@ -446,8 +487,8 @@
         <div>
           <h1>MTG Set Finder</h1>
           <p>
-            Paste a ManaBox card list, compare available printings, and build
-            a set plan that covers the whole deck.
+            Paste a ManaBox list, compare available printings, select sets,
+            and build a complete card assignment for the deck.
           </p>
         </div>
       </header>
@@ -487,7 +528,7 @@ ManaBox-style lines also work:
 
           <label>
             <input id="excludePromos" type="checkbox" checked />
-            Exclude promo sets
+            Exclude promo printings
           </label>
         </div>
 
@@ -562,13 +603,13 @@ ManaBox-style lines also work:
           </table>
         </div>
 
-        <section id="deckBuilder" class="deck-builder">
+        <section class="deck-builder">
           <div class="deck-builder-header">
             <div>
               <h2>Selected Set Plan</h2>
               <p>
-                Select sets above and the app will track which deck cards are
-                covered and what is still missing.
+                Sets are prioritized in the order you select them. The first
+                selected set containing a card becomes that card's assigned set.
               </p>
             </div>
 
@@ -594,7 +635,7 @@ ManaBox-style lines also work:
             </div>
 
             <div class="builder-stat">
-              <strong>Estimated cost</strong>
+              <strong>Estimated assigned cost</strong>
               <div id="selectedSetsCost" class="summary-total">$0.00</div>
             </div>
           </div>
@@ -611,7 +652,7 @@ ManaBox-style lines also work:
             <div class="builder-panel">
               <h3>Selected Sets</h3>
 
-              <div id="selectedSetsList" class="selected-sets-list">
+              <div id="selectedSetsList">
                 <p class="empty-message">
                   No sets selected yet.
                 </p>
@@ -634,6 +675,40 @@ ManaBox-style lines also work:
           </div>
         </section>
 
+        <section class="final-summary">
+          <div class="final-summary-header">
+            <h2>Final Card Assignment</h2>
+            <p>
+              This is the final breakdown of which selected set each card is
+              being sourced from.
+            </p>
+          </div>
+
+          <div
+            id="assignmentSetSummary"
+            class="assignment-summary"
+          ></div>
+
+          <div class="table-wrap">
+            <table class="final-assignment-table">
+              <thead>
+                <tr>
+                  <th>Card</th>
+                  <th>Status</th>
+                  <th>Assigned Set</th>
+                  <th>Code</th>
+                  <th>Price</th>
+                  <th>Finish</th>
+                  <th>Rarity</th>
+                  <th>Collector #</th>
+                </tr>
+              </thead>
+
+              <tbody id="assignmentTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
         <div id="unmatchedArea" class="error-list hidden">
           <h2>Cards Scryfall could not find</h2>
           <ul id="unmatchedCards"></ul>
@@ -641,6 +716,6 @@ ManaBox-style lines also work:
       </section>
     </main>
 
-    <script src="set-finder.js?v=4"></script>
+    <script src="set-finder.js?v=5"></script>
   </body>
 </html>
