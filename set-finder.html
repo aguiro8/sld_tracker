@@ -32,7 +32,18 @@
         color: var(--text);
       }
 
+      .brand-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        }
 
+        .toolbar-logo {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+        flex-shrink: 0;
+        }
       /* -------------------------------------------------------
          Input / finder card
          ------------------------------------------------------- */
@@ -918,12 +929,13 @@
   <body>
     <main class="page-shell">
       <nav class="nav-links">
-        <a href="index.html">
-          Secret Lair Summary
+        <a href="index.html" class="brand-link">
+            <img src="logo.png" alt="MTG Set Finder" class="toolbar-logo" />
+            <span>Secret Lair Summary</span>
         </a>
 
         <strong>
-          Set Finder
+            Set Finder
         </strong>
       </nav>
 
