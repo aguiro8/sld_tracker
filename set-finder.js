@@ -201,7 +201,7 @@ const DB_NAME =
   "mtg-set-finder";
 
 const DB_VERSION =
-  3;
+  4;
 
 const CARD_STORE =
   "cards";
@@ -1357,19 +1357,21 @@ async function refreshBulkDatabase() {
           continue;
         }
 
-        const compact =
-          compactBulkCard(
-            card,
-            cacheId
-          );
+        const compactRecords =
+            compactBulkCard(
+                card,
+                cacheId
+            );
 
-        if (!compact) {
-          continue;
-        }
+            if (
+            compactRecords.length === 0
+            ) {
+            continue;
+            }
 
-        batch.push(
-          compact
-        );
+            batch.push(
+            ...compactRecords
+            );
 
         if (
           batch.length >=
@@ -1424,17 +1426,19 @@ async function refreshBulkDatabase() {
             finalLine
           );
 
-        const compact =
-          compactBulkCard(
-            card,
-            cacheId
-          );
+        const compactRecords =
+            compactBulkCard(
+                card,
+                cacheId
+            );
 
-        if (compact) {
-          batch.push(
-            compact
-          );
-        }
+            if (
+            compactRecords.length > 0
+            ) {
+            batch.push(
+                ...compactRecords
+            );
+            }
       } catch (error) {
         console.warn(
           "Unable to parse final bulk-data line.",
@@ -1543,106 +1547,205 @@ function compactBulkCard(
     !card.name ||
     !card.set
   ) {
-    return null;
+    return [];
   }
 
   const image =
-    getImageUris(
-      card
-    );
+    getImageUris(card);
 
-  return {
-    key:
-      `${cacheId}:${card.id}`,
+  /*
+   * Scryfall's top-level name for many
+   * multi-faced cards looks like:
+   *
+   * Bala Ged Recovery // Bala Ged Sanctuary
+   *
+   * We want the local database to recognize:
+   *
+   * Bala Ged Recovery
+   * Bala Ged Sanctuary
+   * Bala Ged Recovery // Bala Ged Sanctuary
+   */
+  const lookupNames =
+    getCardLookupNames(card);
 
-    cacheId,
+  return lookupNames.map(
+    lookupName => {
+      const nameNorm =
+        normalizeCardName(
+          lookupName
+        );
 
-    id:
-      card.id,
+      return {
+        /*
+         * Each printing can now have multiple
+         * IndexedDB entries — one per searchable
+         * face/name.
+         */
+        key:
+          `${cacheId}:${card.id}:${nameNorm}`,
 
-    name:
-      card.name,
+        cacheId,
 
-    nameNorm:
-      normalizeCardName(
-        card.name
-      ),
+        id:
+          card.id,
 
-    set:
-      card.set,
+        /*
+         * Preserve Scryfall's canonical full name.
+         */
+        name:
+          card.name,
 
-    setName:
-      card.set_name ||
-      card.set,
+        /*
+         * This is the name by which this particular
+         * IndexedDB record can be found.
+         */
+        lookupName,
 
-    setType:
-      card.set_type ||
-      "",
+        nameNorm,
 
-    games:
-      Array.isArray(
-        card.games
-      )
-        ? card.games
-        : [],
+        set:
+          card.set,
 
-    digital:
-      Boolean(
-        card.digital
-      ),
+        setName:
+          card.set_name ||
+          card.set,
 
-    promo:
-      Boolean(
-        card.promo
-      ),
+        setType:
+          card.set_type ||
+          "",
 
-    prices: {
-      usd:
-        card.prices?.usd ??
-        null,
+        games:
+          Array.isArray(
+            card.games
+          )
+            ? card.games
+            : [],
 
-      usdFoil:
-        card.prices?.usd_foil ??
-        null,
+        digital:
+          Boolean(
+            card.digital
+          ),
 
-      usdEtched:
-        card.prices?.usd_etched ??
-        null
-    },
+        promo:
+          Boolean(
+            card.promo
+          ),
 
-    finishes:
-      card.finishes || [],
+        prices: {
+          usd:
+            card.prices?.usd ??
+            null,
 
-    collectorNumber:
-      card.collector_number ||
-      "",
+          usdFoil:
+            card.prices?.usd_foil ??
+            null,
 
-    rarity:
-      card.rarity ||
-      "",
+          usdEtched:
+            card.prices?.usd_etched ??
+            null
+        },
 
-    releasedAt:
-      card.released_at ||
-      "",
+        finishes:
+          card.finishes || [],
 
-    scryfallUri:
-      card.scryfall_uri ||
-      "",
+        collectorNumber:
+          card.collector_number ||
+          "",
 
-    imageSmall:
-      image.small ||
-      image.thumb ||
-      "",
+        rarity:
+          card.rarity ||
+          "",
 
-    imageNormal:
-      image.normal ||
-      image.grid ||
-      image.small ||
-      image.thumb ||
-      ""
-  };
+        releasedAt:
+          card.released_at ||
+          "",
+
+        scryfallUri:
+          card.scryfall_uri ||
+          "",
+
+        imageSmall:
+          image.small ||
+          image.thumb ||
+          "",
+
+        imageNormal:
+          image.normal ||
+          image.grid ||
+          image.small ||
+          image.thumb ||
+          ""
+      };
+    }
+  );
 }
 
+
+function getCardLookupNames(card) {
+  const names =
+    new Set();
+
+  /*
+   * Always include Scryfall's complete
+   * canonical card name.
+   */
+  if (card.name) {
+    names.add(
+      card.name.trim()
+    );
+  }
+
+  /*
+   * Include every card face.
+   *
+   * This is the important part for:
+   *
+   * Bala Ged Recovery
+   * Bala Ged Sanctuary
+   */
+  if (
+    Array.isArray(
+      card.card_faces
+    )
+  ) {
+    for (
+      const face
+      of card.card_faces
+    ) {
+      if (face?.name) {
+        names.add(
+          face.name.trim()
+        );
+      }
+    }
+  }
+
+  /*
+   * Also split the top-level "//" name.
+   *
+   * This provides a fallback for any object
+   * where card_faces is absent or unexpected.
+   */
+  if (
+    card.name?.includes("//")
+  ) {
+    for (
+      const part
+      of card.name.split("//")
+    ) {
+      const trimmed =
+        part.trim();
+
+      if (trimmed) {
+        names.add(
+          trimmed
+        );
+      }
+    }
+  }
+
+  return [...names];
+}
 
 function getImageUris(
   card
