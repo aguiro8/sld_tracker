@@ -4,19 +4,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SLD Collection</title>
+
     <link rel="stylesheet" href="styles.css?v=2" />
+
+    <style>
+      .nav-links {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .nav-links a {
+        color: inherit;
+      }
+    </style>
   </head>
+
   <body>
     <main class="page-shell">
+
+      <nav class="nav-links">
+        <strong>Secret Lair Summary</strong>
+        <a href="set-finder.html">Set Finder</a>
+      </nav>
+
       <header class="page-header">
         <div>
-          <!-- <p class="eyebrow">GitHub Pages demo</p> -->
           <h1>Secret Lair Summary</h1>
         </div>
+
         <div class="controls">
-          <button id="refreshButton" type="button">Reload local CSV</button>
+          <button id="refreshButton" type="button">
+            Reload local CSV
+          </button>
         </div>
       </header>
+
+      <!-- rest of your existing index.html -->
 
       <!-- <section class="status-card">
         <div>

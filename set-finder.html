@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MTG Set Finder</title>
+
+    <link rel="stylesheet" href="styles.css?v=2" />
+
+    <style>
+      .nav-links {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .nav-links a {
+        color: inherit;
+      }
+
+      .finder-card {
+        background: var(--card-background, #ffffff);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .finder-input {
+        width: 100%;
+        min-height: 300px;
+        box-sizing: border-box;
+        resize: vertical;
+        font-family: monospace;
+        font-size: 14px;
+        padding: 12px;
+        margin-top: 10px;
+      }
+
+      .finder-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      .finder-actions button {
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+
+      .finder-options {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .finder-options label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .progress {
+        margin-top: 16px;
+        font-size: 14px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 12px;
+        background: #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: #666;
+        transition: width 0.2s ease;
+      }
+
+      .best-set {
+        margin-bottom: 20px;
+        padding: 18px;
+        border: 2px solid #777;
+        border-radius: 8px;
+      }
+
+      .best-set-name {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-top: 4px;
+      }
+
+      .best-set-stats {
+        margin-top: 6px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .error-list {
+        margin-top: 12px;
+      }
+
+      .set-code {
+        font-family: monospace;
+        text-transform: uppercase;
+      }
+
+      .card-details {
+        margin-top: 8px;
+      }
+
+      .card-details summary {
+        cursor: pointer;
+      }
+
+      .card-list {
+        columns: 2;
+        margin-top: 10px;
+      }
+
+      @media (max-width: 700px) {
+        .card-list {
+          columns: 1;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page-shell">
+      <nav class="nav-links">
+        <a href="index.html">Secret Lair Summary</a>
+        <strong>Set Finder</strong>
+      </nav>
+
+      <header class="page-header">
+        <div>
+          <h1>MTG Set Finder</h1>
+          <p>
+            Paste a ManaBox card list and find the Magic sets that contain
+            the most cards from that list.
+          </p>
+        </div>
+      </header>
+
+      <section class="finder-card">
+        <label for="cardInput">
+          <strong>ManaBox card list</strong>
+        </label>
+
+        <textarea
+          id="cardInput"
+          class="finder-input"
+          placeholder="Paste your list here...
+
+Examples:
+
+1 Sol Ring
+1 Swords to Plowshares
+1 Counterspell
+1 Arcane Signet
+
+ManaBox lines such as these also work:
+
+1 Sol Ring (CMM) 396
+1 Counterspell (DMR) 45
+1 Swords to Plowshares (2X2) 31"
+        ></textarea>
+
+        <div class="finder-options">
+          <label>
+            <input id="paperOnly" type="checkbox" checked />
+            Paper printings only
+          </label>
+
+          <label>
+            <input id="excludeSecretLair" type="checkbox" />
+            Exclude Secret Lair
+          </label>
+
+          <label>
+            <input id="excludePromos" type="checkbox" />
+            Exclude promo sets
+          </label>
+        </div>
+
+        <div class="finder-actions">
+          <button id="analyzeButton" type="button">
+            Find Best Sets
+          </button>
+
+          <button id="clearButton" type="button">
+            Clear
+          </button>
+        </div>
+
+        <div id="progressArea" class="progress hidden">
+          <div id="statusMessage">Waiting...</div>
+
+          <div class="progress-bar">
+            <div id="progressBarFill" class="progress-bar-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="resultsSection" class="results-card hidden">
+        <div id="bestSet" class="best-set hidden">
+          <strong>Best matching set</strong>
+
+          <div id="bestSetName" class="best-set-name"></div>
+
+          <div id="bestSetStats" class="best-set-stats"></div>
+        </div>
+
+        <div class="summary-row">
+          <div class="summary-stat">
+            <strong>Cards searched</strong>
+            <div id="cardCount" class="summary-total">0</div>
+          </div>
+
+          <div class="summary-stat">
+            <strong>Sets found</strong>
+            <div id="setCount" class="summary-total">0</div>
+          </div>
+
+          <div class="summary-stat">
+            <strong>Unmatched cards</strong>
+            <div id="unmatchedCount" class="summary-total">0</div>
+          </div>
+        </div>
+
+        <div class="table-toolbar">
+          <div>
+            <strong>Set rankings</strong>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Set</th>
+                <th>Code</th>
+                <th>Cards Found</th>
+                <th>Coverage</th>
+                <th>Cards</th>
+              </tr>
+            </thead>
+
+            <tbody id="setResults"></tbody>
+          </table>
+        </div>
+
+        <div id="unmatchedArea" class="error-list hidden">
+          <h2>Cards Scryfall could not find</h2>
+          <ul id="unmatchedCards"></ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="set-finder.js?v=1"></script>
+  </body>
+</html>
