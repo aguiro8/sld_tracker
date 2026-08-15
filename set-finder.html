@@ -9,128 +9,259 @@
     <link rel="stylesheet" href="styles.css?v=2" />
 
     <style>
-      .nav-links {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-      }
+        .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
 
-      .nav-links a {
-        color: inherit;
-      }
+.nav-links strong {
+  color: var(--text);
+}
 
-      .finder-card {
-        background: var(--card-background, #ffffff);
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-      }
+.finder-card {
+  margin-top: 18px;
+  padding: 18px 20px 20px;
 
-      .finder-input {
-        width: 100%;
-        min-height: 300px;
-        box-sizing: border-box;
-        resize: vertical;
-        font-family: monospace;
-        font-size: 14px;
-        padding: 12px;
-        margin-top: 10px;
-      }
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 16px;
 
-      .finder-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 12px;
-        flex-wrap: wrap;
-      }
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+}
 
-      .finder-actions button {
-        padding: 10px 16px;
-        cursor: pointer;
-      }
+.finder-card > label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 
-      .finder-options {
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-        margin-top: 16px;
-      }
+.finder-input {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 10px;
+  padding: 12px 14px;
 
-      .finder-options label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
+  resize: vertical;
 
-      .progress {
-        margin-top: 16px;
-        font-size: 14px;
-      }
+  border: 1px solid var(--border);
+  border-radius: 10px;
 
-      .progress-bar {
-        width: 100%;
-        height: 12px;
-        background: #ddd;
-        border-radius: 6px;
-        overflow: hidden;
-        margin-top: 8px;
-      }
+  background: var(--panel-alt);
+  color: var(--text);
 
-      .progress-bar-fill {
-        height: 100%;
-        width: 0%;
-        background: #666;
-        transition: width 0.2s ease;
-      }
+  font-family:
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    Menlo,
+    monospace;
 
-      .best-set {
-        margin-bottom: 20px;
-        padding: 18px;
-        border: 2px solid #777;
-        border-radius: 8px;
-      }
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
 
-      .best-set-name {
-        font-size: 1.4rem;
-        font-weight: bold;
-        margin-top: 4px;
-      }
+.finder-input::placeholder {
+  color: var(--muted);
+}
 
-      .best-set-stats {
-        margin-top: 6px;
-      }
+.finder-input:focus {
+  outline: 2px solid rgba(56, 189, 248, 0.35);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
 
-      .hidden {
-        display: none !important;
-      }
+.finder-options {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
 
-      .error-list {
-        margin-top: 12px;
-      }
+  margin-top: 16px;
+}
 
-      .set-code {
-        font-family: monospace;
-        text-transform: uppercase;
-      }
+.finder-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 
-      .card-details {
-        margin-top: 8px;
-      }
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
 
-      .card-details summary {
-        cursor: pointer;
-      }
+.finder-options input[type="checkbox"] {
+  accent-color: var(--accent);
+}
 
-      .card-list {
-        columns: 2;
-        margin-top: 10px;
-      }
+.finder-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 
-      @media (max-width: 700px) {
-        .card-list {
-          columns: 1;
-        }
-      }
+  margin-top: 16px;
+}
+
+.progress {
+  margin-top: 18px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+
+  margin-top: 8px;
+
+  overflow: hidden;
+
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.progress-bar-fill {
+  width: 0%;
+  height: 100%;
+
+  background: var(--accent);
+
+  transition: width 0.2s ease;
+}
+
+.best-set {
+  margin-bottom: 16px;
+  padding: 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.best-set > strong {
+  color: var(--muted);
+}
+
+.best-set-name {
+  margin-top: 6px;
+
+  color: var(--accent);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.best-set-stats {
+  margin-top: 8px;
+  color: var(--text);
+}
+
+.best-set-stats > div {
+  margin-top: 4px;
+}
+
+.card-details summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.price-note {
+  margin-top: 4px;
+
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.expensive-box {
+  margin: 12px 0;
+  padding: 12px;
+
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 10px;
+
+  background: rgba(127, 29, 29, 0.22);
+}
+
+.expensive-box strong {
+  color: #fca5a5;
+}
+
+.expensive-box ul {
+  margin-bottom: 0;
+}
+
+.expensive-price {
+  color: #fca5a5;
+  font-weight: 700;
+}
+
+.inner-card-table {
+  width: 100%;
+  margin-top: 12px;
+
+  border-collapse: collapse;
+
+  background: transparent;
+}
+
+.inner-card-table th,
+.inner-card-table td {
+  padding: 8px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: transparent;
+}
+
+.inner-card-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.inner-card-table td {
+  font-size: 0.88rem;
+}
+
+.inner-card-table tr:hover td {
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.error-list {
+  margin-top: 18px;
+  padding: 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: rgba(248, 113, 113, 0.06);
+}
+
+.error-list h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 780px) {
+  .finder-card {
+    padding: 16px;
+  }
+
+  .finder-input {
+    min-height: 240px;
+  }
+
+  .finder-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inner-card-table {
+    min-width: 600px;
+  }
+}
     </style>
   </head>
 
@@ -246,14 +377,15 @@ ManaBox lines such as these also work:
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Set</th>
-                <th>Code</th>
-                <th>Cards Found</th>
-                <th>Coverage</th>
-                <th>Cards</th>
-              </tr>
+                <tr>
+                    <th>Rank</th>
+                    <th>Set</th>
+                    <th>Code</th>
+                    <th>Cards Found</th>
+                    <th>Coverage</th>
+                    <th>Estimated Cost</th>
+                    <th>Cards / Prices</th>
+                </tr>
             </thead>
 
             <tbody id="setResults"></tbody>

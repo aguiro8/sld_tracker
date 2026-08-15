@@ -30,14 +30,15 @@ const unmatchedCardsList =
 
 let isRunning = false;
 
+const SCRYFALL_DELAY_MS = 550;
 
 /*
- * Scryfall currently limits /cards/search to
- * 2 requests per second.
+ * Change this threshold if you want.
  *
- * 550 ms gives us a little safety margin.
+ * Cards at or above this price are considered
+ * "expensive" for the summary.
  */
-const SCRYFALL_DELAY_MS = 550;
+const EXPENSIVE_THRESHOLD = 25;
 
 
 /*
@@ -93,7 +94,6 @@ async function analyzeCards() {
 
   analyzeButton.disabled = true;
   clearButton.disabled = true;
-
   analyzeButton.textContent = "Searching...";
 
   resetResults();
@@ -103,20 +103,7 @@ async function analyzeCards() {
 
   cardCount.textContent = cardNames.length;
 
-  /*
-   * Map format:
-   *
-   * {
-   *   "cmm" => {
-   *      code: "cmm",
-   *      name: "Commander Masters",
-   *      setType: "masters",
-   *      cards: Set(...)
-   *   }
-   * }
-   */
   const sets = new Map();
-
   const unmatchedCards = [];
 
   try {
@@ -150,12 +137,6 @@ async function analyzeCards() {
         unmatchedCards.push(cardName);
       }
 
-      /*
-       * Wait between cards so we don't exceed Scryfall's
-       * /cards/search API limit.
-       *
-       * We don't need to wait after the final card.
-       */
       if (index < cardNames.length - 1) {
         await delay(SCRYFALL_DELAY_MS);
       }
@@ -187,7 +168,6 @@ async function analyzeCards() {
 
     analyzeButton.disabled = false;
     clearButton.disabled = false;
-
     analyzeButton.textContent = "Find Best Sets";
   }
 }
@@ -208,45 +188,20 @@ function parseManaBoxList(text) {
     .filter(Boolean);
 
   for (let line of lines) {
-    /*
-     * Ignore some common deck section headings.
-     */
     if (isSectionHeading(line)) {
       continue;
     }
 
-    /*
-     * Remove leading quantities:
-     *
-     * 1 Sol Ring
-     * 4 Counterspell
-     * 4x Counterspell
-     * 4 x Counterspell
-     */
     line = line.replace(
       /^\d+\s*x?\s+/i,
       ""
     );
 
-    /*
-     * Remove common ManaBox / Moxfield-style
-     * set and collector number:
-     *
-     * Sol Ring (CMM) 396
-     * Counterspell (DMR) 45
-     *
-     * Also allows:
-     *
-     * Sol Ring (CMM) 396 *F*
-     */
     line = line.replace(
       /\s+\([A-Za-z0-9]+\)\s+[A-Za-z0-9★]+(?:\s+.*)?$/,
       ""
     );
 
-    /*
-     * Remove trailing foil markers that may remain.
-     */
     line = line.replace(
       /\s+\*(?:F|E)\*$/i,
       ""
@@ -296,14 +251,6 @@ function isSectionHeading(line) {
  */
 
 async function getPrintings(cardName) {
-  /*
-   * !"Card Name"
-   *
-   * Scryfall's ! operator performs an exact-name search.
-   *
-   * unique=prints tells Scryfall not to collapse all the
-   * different printings into one result.
-   */
   const query = `!"${cardName}"`;
 
   let url =
@@ -315,17 +262,10 @@ async function getPrintings(cardName) {
   while (url) {
     const response = await fetch(url);
 
-    /*
-     * Scryfall returns 404 when a search has no results.
-     */
     if (response.status === 404) {
       return [];
     }
 
-    /*
-     * Respect rate-limit errors rather than immediately
-     * hammering the API again.
-     */
     if (response.status === 429) {
       throw new Error(
         "Scryfall rate limit reached. Wait about 30 seconds and try again."
@@ -344,16 +284,8 @@ async function getPrintings(cardName) {
       printings.push(...data.data);
     }
 
-    /*
-     * Scryfall search results are paginated.
-     */
     if (data.has_more && data.next_page) {
-      /*
-       * Pagination is another /cards/search request,
-       * so wait before requesting the next page.
-       */
       await delay(SCRYFALL_DELAY_MS);
-
       url = data.next_page;
     } else {
       url = null;
@@ -361,6 +293,106 @@ async function getPrintings(cardName) {
   }
 
   return printings;
+}
+
+
+/*
+ * ------------------------------------------------------------
+ * Price helpers
+ * ------------------------------------------------------------
+ */
+
+/*
+ * Scryfall prices are strings or null:
+ *
+ * {
+ *   usd: "2.15",
+ *   usd_foil: "5.20",
+ *   usd_etched: null
+ * }
+ *
+ * This returns the cheapest available USD price
+ * for the specific printing.
+ */
+function getCheapestPrintingPrice(printing) {
+  const priceOptions = [];
+
+  const usd =
+    parsePrice(printing.prices?.usd);
+
+  const usdFoil =
+    parsePrice(printing.prices?.usd_foil);
+
+  const usdEtched =
+    parsePrice(printing.prices?.usd_etched);
+
+  if (usd !== null) {
+    priceOptions.push({
+      price: usd,
+      finish: "normal"
+    });
+  }
+
+  if (usdFoil !== null) {
+    priceOptions.push({
+      price: usdFoil,
+      finish: "foil"
+    });
+  }
+
+  if (usdEtched !== null) {
+    priceOptions.push({
+      price: usdEtched,
+      finish: "etched"
+    });
+  }
+
+  if (priceOptions.length === 0) {
+    return null;
+  }
+
+  priceOptions.sort(
+    (a, b) => a.price - b.price
+  );
+
+  return priceOptions[0];
+}
+
+
+function parsePrice(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const number =
+    Number.parseFloat(value);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+
+function formatCurrency(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(value)
+  ) {
+    return "N/A";
+  }
+
+  return value.toLocaleString(
+    "en-US",
+    {
+      style: "currency",
+      currency: "USD"
+    }
+  );
 }
 
 
@@ -385,17 +417,12 @@ function addPrintingsToSets(
     excludePromosCheckbox.checked;
 
   /*
-   * A card may have multiple printings, art treatments,
-   * collector numbers, etc. in the same set.
-   *
-   * We only want that card to count ONCE for that set.
+   * Store the cheapest printing for this card
+   * within each set.
    */
-  const setsForThisCard = new Set();
+  const bestPrintingPerSet = new Map();
 
   for (const printing of printings) {
-    /*
-     * Paper-only filter.
-     */
     if (
       paperOnly &&
       !printing.games?.includes("paper")
@@ -403,13 +430,6 @@ function addPrintingsToSets(
       continue;
     }
 
-    /*
-     * Exclude Secret Lair if requested.
-     *
-     * Scryfall uses set_type = "box" for Secret Lair,
-     * so checking the set code/name is safer for this
-     * specific purpose.
-     */
     if (
       excludeSecretLair &&
       isSecretLairPrinting(printing)
@@ -417,48 +437,143 @@ function addPrintingsToSets(
       continue;
     }
 
-    /*
-     * Optional broad promo exclusion.
-     */
     if (
       excludePromos &&
-      printing.set_type === "promo"
+      printing.promo === true
     ) {
       continue;
     }
 
-    const setCode = printing.set;
+    const setCode =
+      printing.set;
 
     if (!setCode) {
       continue;
     }
 
+    const priceInfo =
+      getCheapestPrintingPrice(printing);
+
+    const existing =
+      bestPrintingPerSet.get(setCode);
+
     /*
-     * Do not count the same card twice in one set.
+     * If we haven't seen this set yet,
+     * store this printing.
      */
-    if (setsForThisCard.has(setCode)) {
+    if (!existing) {
+      bestPrintingPerSet.set(
+        setCode,
+        {
+          printing,
+          priceInfo
+        }
+      );
+
       continue;
     }
 
-    setsForThisCard.add(setCode);
+    /*
+     * Prefer a printing with a known price
+     * over one with no price.
+     */
+    if (
+      !existing.priceInfo &&
+      priceInfo
+    ) {
+      bestPrintingPerSet.set(
+        setCode,
+        {
+          printing,
+          priceInfo
+        }
+      );
+
+      continue;
+    }
+
+    /*
+     * If both have prices,
+     * keep the cheaper one.
+     */
+    if (
+      existing.priceInfo &&
+      priceInfo &&
+      priceInfo.price <
+        existing.priceInfo.price
+    ) {
+      bestPrintingPerSet.set(
+        setCode,
+        {
+          printing,
+          priceInfo
+        }
+      );
+    }
+  }
+
+  /*
+   * Add the chosen printing for each set.
+   */
+  for (
+    const [setCode, result]
+    of bestPrintingPerSet.entries()
+  ) {
+    const printing =
+      result.printing;
+
+    const priceInfo =
+      result.priceInfo;
 
     if (!sets.has(setCode)) {
-      sets.set(setCode, {
-        code: setCode,
-        name:
-          printing.set_name ||
-          setCode.toUpperCase(),
-        setType:
-          printing.set_type ||
-          "",
-        cards: new Set()
-      });
+      sets.set(
+        setCode,
+        {
+          code: setCode,
+          name:
+            printing.set_name ||
+            setCode.toUpperCase(),
+          setType:
+            printing.set_type || "",
+          cards: new Map()
+        }
+      );
     }
 
     sets
       .get(setCode)
       .cards
-      .add(cardName);
+      .set(
+        cardName,
+        {
+          name: cardName,
+
+          price:
+            priceInfo
+              ? priceInfo.price
+              : null,
+
+          finish:
+            priceInfo
+              ? priceInfo.finish
+              : null,
+
+          collectorNumber:
+            printing.collector_number || "",
+
+          rarity:
+            printing.rarity || "",
+
+          scryfallUri:
+            printing.scryfall_uri || "",
+
+          purchaseUri:
+            printing.purchase_uris?.tcgplayer || "",
+
+          printingId:
+            printing.id || ""
+        }
+      );
   }
 }
 
@@ -472,11 +587,6 @@ function isSecretLairPrinting(printing) {
     String(printing.set_name || "")
       .toLowerCase();
 
-  /*
-   * SLD is the main Secret Lair Drop set code.
-   * We also check the name in case Scryfall adds
-   * related Secret Lair set codes later.
-   */
   return (
     code === "sld" ||
     name.includes("secret lair")
@@ -486,7 +596,7 @@ function isSecretLairPrinting(printing) {
 
 /*
  * ------------------------------------------------------------
- * Ranking
+ * Ranking and totals
  * ------------------------------------------------------------
  */
 
@@ -496,41 +606,127 @@ function rankSets(
 ) {
   return [...sets.values()]
     .map(set => {
+      const cards =
+        [...set.cards.values()]
+          .sort(
+            (a, b) =>
+              a.name.localeCompare(b.name)
+          );
+
+      const pricedCards =
+        cards.filter(
+          card =>
+            card.price !== null
+        );
+
+      const totalCost =
+        pricedCards.reduce(
+          (sum, card) =>
+            sum + card.price,
+          0
+        );
+
+      const averagePrice =
+        pricedCards.length === 0
+          ? null
+          : totalCost /
+            pricedCards.length;
+
+      const expensiveCards =
+        pricedCards
+          .filter(
+            card =>
+              card.price >=
+              EXPENSIVE_THRESHOLD
+          )
+          .sort(
+            (a, b) =>
+              b.price - a.price
+          );
+
+      const mostExpensive =
+        [...pricedCards]
+          .sort(
+            (a, b) =>
+              b.price - a.price
+          )
+          .slice(0, 5);
+
       const count =
-        set.cards.size;
+        cards.length;
 
       return {
-        code: set.code,
-        name: set.name,
-        setType: set.setType,
-        cards: [...set.cards].sort(
-          (a, b) =>
-            a.localeCompare(b)
-        ),
+        code:
+          set.code,
+
+        name:
+          set.name,
+
+        setType:
+          set.setType,
+
+        cards,
+
         count,
+
+        pricedCount:
+          pricedCards.length,
+
+        missingPriceCount:
+          cards.length -
+          pricedCards.length,
+
+        totalCost,
+
+        averagePrice,
+
+        expensiveCards,
+
+        mostExpensive,
+
         coverage:
           totalCards === 0
             ? 0
-            : count / totalCards
+            : count /
+              totalCards
       };
     })
-    .sort((a, b) => {
-      /*
-       * Primary sort:
-       * Most matching cards first.
-       */
-      if (b.count !== a.count) {
-        return b.count - a.count;
-      }
+    .sort(
+      (a, b) => {
+        /*
+         * Most cards first.
+         */
+        if (
+          b.count !==
+          a.count
+        ) {
+          return (
+            b.count -
+            a.count
+          );
+        }
 
-      /*
-       * Secondary sort:
-       * Alphabetical set name.
-       */
-      return a.name.localeCompare(
-        b.name
-      );
-    });
+        /*
+         * If coverage ties,
+         * show cheaper set first.
+         */
+        if (
+          a.totalCost !==
+          b.totalCost
+        ) {
+          return (
+            a.totalCost -
+            b.totalCost
+          );
+        }
+
+        return (
+          a.name.localeCompare(
+            b.name
+          )
+        );
+      }
+    );
 }
 
 
@@ -569,12 +765,13 @@ function renderResults(
 
       const coveragePercent =
         (
-          set.coverage * 100
+          set.coverage *
+          100
         ).toFixed(1);
 
+
       /*
-       * Create each cell separately rather than inserting
-       * untrusted card names directly with innerHTML.
+       * Rank
        */
       const rankCell =
         document.createElement("td");
@@ -583,6 +780,9 @@ function renderResults(
         index + 1;
 
 
+      /*
+       * Set name
+       */
       const nameCell =
         document.createElement("td");
 
@@ -590,6 +790,9 @@ function renderResults(
         set.name;
 
 
+      /*
+       * Set code
+       */
       const codeCell =
         document.createElement("td");
 
@@ -600,6 +803,9 @@ function renderResults(
         set.code.toUpperCase();
 
 
+      /*
+       * Card count
+       */
       const countCell =
         document.createElement("td");
 
@@ -607,6 +813,9 @@ function renderResults(
         `${set.count} / ${totalCards}`;
 
 
+      /*
+       * Coverage
+       */
       const coverageCell =
         document.createElement("td");
 
@@ -614,6 +823,38 @@ function renderResults(
         `${coveragePercent}%`;
 
 
+      /*
+       * Total estimated cost
+       */
+      const costCell =
+        document.createElement("td");
+
+      costCell.textContent =
+        formatCurrency(
+          set.totalCost
+        );
+
+      if (
+        set.missingPriceCount > 0
+      ) {
+        const note =
+          document.createElement("div");
+
+        note.className =
+          "price-note";
+
+        note.textContent =
+          `${set.missingPriceCount} without price`;
+
+        costCell.appendChild(
+          note
+        );
+      }
+
+
+      /*
+       * Individual cards / expensive printings
+       */
       const cardsCell =
         document.createElement("td");
 
@@ -629,35 +870,252 @@ function renderResults(
       summary.textContent =
         `Show ${set.count} cards`;
 
-      const cardList =
-        document.createElement("ul");
+      details.appendChild(
+        summary
+      );
 
-      cardList.className =
-        "card-list";
 
-      for (const cardName of set.cards) {
-        const item =
-          document.createElement("li");
+      /*
+       * Expensive cards summary
+       */
+      if (
+        set.expensiveCards.length >
+        0
+      ) {
+        const expensiveBox =
+          document.createElement("div");
 
-        item.textContent =
-          cardName;
+        expensiveBox.className =
+          "expensive-box";
 
-        cardList.appendChild(item);
+        const heading =
+          document.createElement("strong");
+
+        heading.textContent =
+          `Expensive printings ($${EXPENSIVE_THRESHOLD}+):`;
+
+        expensiveBox.appendChild(
+          heading
+        );
+
+        const expensiveList =
+          document.createElement("ul");
+
+        for (
+          const card
+          of set.expensiveCards
+        ) {
+          const item =
+            document.createElement("li");
+
+          item.textContent =
+            `${card.name}: ${formatCurrency(card.price)} (${card.finish})`;
+
+          expensiveList.appendChild(
+            item
+          );
+        }
+
+        expensiveBox.appendChild(
+          expensiveList
+        );
+
+        details.appendChild(
+          expensiveBox
+        );
       }
 
-      details.appendChild(summary);
-      details.appendChild(cardList);
 
-      cardsCell.appendChild(details);
+      /*
+       * Full card table
+       */
+      const cardTable =
+        document.createElement("table");
 
-      row.appendChild(rankCell);
-      row.appendChild(nameCell);
-      row.appendChild(codeCell);
-      row.appendChild(countCell);
-      row.appendChild(coverageCell);
-      row.appendChild(cardsCell);
+      cardTable.className =
+        "inner-card-table";
 
-      setResults.appendChild(row);
+      const thead =
+        document.createElement("thead");
+
+      const headerRow =
+        document.createElement("tr");
+
+      [
+        "Card",
+        "Price",
+        "Finish",
+        "Rarity",
+        "Collector #"
+      ].forEach(label => {
+        const th =
+          document.createElement("th");
+
+        th.textContent =
+          label;
+
+        headerRow.appendChild(
+          th
+        );
+      });
+
+      thead.appendChild(
+        headerRow
+      );
+
+      cardTable.appendChild(
+        thead
+      );
+
+      const tbody =
+        document.createElement("tbody");
+
+      for (
+        const card
+        of set.cards
+      ) {
+        const cardRow =
+          document.createElement("tr");
+
+
+        const nameTd =
+          document.createElement("td");
+
+        if (card.scryfallUri) {
+          const link =
+            document.createElement("a");
+
+          link.href =
+            card.scryfallUri;
+
+          link.target =
+            "_blank";
+
+          link.rel =
+            "noopener noreferrer";
+
+          link.textContent =
+            card.name;
+
+          nameTd.appendChild(
+            link
+          );
+        } else {
+          nameTd.textContent =
+            card.name;
+        }
+
+
+        const priceTd =
+          document.createElement("td");
+
+        priceTd.textContent =
+          formatCurrency(
+            card.price
+          );
+
+        if (
+          card.price !== null &&
+          card.price >=
+            EXPENSIVE_THRESHOLD
+        ) {
+          priceTd.classList.add(
+            "expensive-price"
+          );
+        }
+
+
+        const finishTd =
+          document.createElement("td");
+
+        finishTd.textContent =
+          card.finish || "N/A";
+
+
+        const rarityTd =
+          document.createElement("td");
+
+        rarityTd.textContent =
+          card.rarity || "N/A";
+
+
+        const collectorTd =
+          document.createElement("td");
+
+        collectorTd.textContent =
+          card.collectorNumber ||
+          "N/A";
+
+
+        cardRow.appendChild(
+          nameTd
+        );
+
+        cardRow.appendChild(
+          priceTd
+        );
+
+        cardRow.appendChild(
+          finishTd
+        );
+
+        cardRow.appendChild(
+          rarityTd
+        );
+
+        cardRow.appendChild(
+          collectorTd
+        );
+
+        tbody.appendChild(
+          cardRow
+        );
+      }
+
+      cardTable.appendChild(
+        tbody
+      );
+
+      details.appendChild(
+        cardTable
+      );
+
+      cardsCell.appendChild(
+        details
+      );
+
+
+      row.appendChild(
+        rankCell
+      );
+
+      row.appendChild(
+        nameCell
+      );
+
+      row.appendChild(
+        codeCell
+      );
+
+      row.appendChild(
+        countCell
+      );
+
+      row.appendChild(
+        coverageCell
+      );
+
+      row.appendChild(
+        costCell
+      );
+
+      row.appendChild(
+        cardsCell
+      );
+
+      setResults.appendChild(
+        row
+      );
     }
   );
 
@@ -681,19 +1139,113 @@ function renderBestSet(
   bestSetName.textContent =
     `${set.name} (${set.code.toUpperCase()})`;
 
-  bestSetStats.textContent =
+  bestSetStats.innerHTML = "";
+
+  const coverageLine =
+    document.createElement("div");
+
+  coverageLine.textContent =
     `${set.count} of ${totalCards} cards — ${percentage}% coverage`;
 
-  bestSet.classList.remove("hidden");
+  bestSetStats.appendChild(
+    coverageLine
+  );
+
+
+  const costLine =
+    document.createElement("div");
+
+  costLine.textContent =
+    `Estimated total: ${formatCurrency(set.totalCost)}`;
+
+  bestSetStats.appendChild(
+    costLine
+  );
+
+
+  if (
+    set.averagePrice !== null
+  ) {
+    const averageLine =
+      document.createElement("div");
+
+    averageLine.textContent =
+      `Average card price: ${formatCurrency(set.averagePrice)}`;
+
+    bestSetStats.appendChild(
+      averageLine
+    );
+  }
+
+
+  if (
+    set.missingPriceCount > 0
+  ) {
+    const missingLine =
+      document.createElement("div");
+
+    missingLine.textContent =
+      `${set.missingPriceCount} card(s) had no USD price`;
+
+    bestSetStats.appendChild(
+      missingLine
+    );
+  }
+
+
+  if (
+    set.mostExpensive.length >
+    0
+  ) {
+    const expensiveTitle =
+      document.createElement("strong");
+
+    expensiveTitle.textContent =
+      "Most expensive:";
+
+    bestSetStats.appendChild(
+      expensiveTitle
+    );
+
+    const list =
+      document.createElement("ul");
+
+    for (
+      const card
+      of set.mostExpensive
+    ) {
+      const item =
+        document.createElement("li");
+
+      item.textContent =
+        `${card.name}: ${formatCurrency(card.price)} (${card.finish})`;
+
+      list.appendChild(
+        item
+      );
+    }
+
+    bestSetStats.appendChild(
+      list
+    );
+  }
+
+  bestSet.classList.remove(
+    "hidden"
+  );
 }
 
 
 function renderUnmatchedCards(
   unmatchedCards
 ) {
-  unmatchedCardsList.innerHTML = "";
+  unmatchedCardsList.innerHTML =
+    "";
 
-  if (unmatchedCards.length === 0) {
+  if (
+    unmatchedCards.length ===
+    0
+  ) {
     unmatchedArea.classList.add(
       "hidden"
     );
@@ -731,8 +1283,13 @@ function renderUnmatchedCards(
 function resetResults() {
   setResults.innerHTML = "";
 
-  bestSet.classList.add("hidden");
-  unmatchedArea.classList.add("hidden");
+  bestSet.classList.add(
+    "hidden"
+  );
+
+  unmatchedArea.classList.add(
+    "hidden"
+  );
 
   bestSetName.textContent = "";
   bestSetStats.textContent = "";
@@ -741,7 +1298,8 @@ function resetResults() {
   setCount.textContent = "0";
   unmatchedCount.textContent = "0";
 
-  progressBarFill.style.width = "0%";
+  progressBarFill.style.width =
+    "0%";
 }
 
 
