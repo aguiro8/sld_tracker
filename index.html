@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="styles.css?v=3" />
     <link rel="icon" type="image/png" href="logo.png" />
+
     <style>
       .nav-links {
         display: flex;
@@ -17,12 +18,28 @@
       .nav-links a {
         color: inherit;
       }
+
+      .net-change {
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .net-change.positive {
+        color: #16803c;
+      }
+
+      .net-change.negative {
+        color: #c62828;
+      }
+
+      .net-change.neutral {
+        color: inherit;
+      }
     </style>
   </head>
 
   <body>
     <main class="page-shell">
-
       <nav class="nav-links">
         <strong>Secret Lair Summary</strong>
         <a href="set-finder.html">Set Finder</a>
@@ -40,29 +57,18 @@
         </div>
       </header>
 
-      <!-- rest of your existing index.html -->
-
-      <!-- <section class="status-card">
-        <div>
-          <strong>Target endpoint</strong>
-          <div class="endpoint">https://tcgcsv.com/tcgplayer/{category_id}/{group_id}/prices</div>
-        </div>
-        <div>
-          <strong>Configured group</strong>
-          <div id="groupLabel">category 1 / group 2576</div>
-        </div>
-      </section> -->
-
       <section class="results-card">
         <div class="summary-row">
           <div class="summary-stat">
             <strong>Total market value</strong>
             <div id="totalValue" class="summary-total">$0.00</div>
           </div>
+
           <div class="summary-stat">
             <strong>Total items</strong>
             <div id="summaryCount" class="summary-total">0</div>
           </div>
+
           <div class="summary-stat hidden" id="unmatchedRowsStat">
             <strong>Unmatched rows</strong>
             <div id="unmatchedRows" class="summary-total">0</div>
@@ -73,25 +79,90 @@
           <div>
             <strong id="resultCount">0 items</strong>
           </div>
-          <div id="statusMessage" class="status-message">Loading CSV…</div>
+
+          <div id="statusMessage" class="status-message">
+            Loading CSV…
+          </div>
         </div>
 
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th><button type="button" class="sort-button" data-sort-key="name">Name <span class="sort-indicator">↕</span></button></th>
-                <th><button type="button" class="sort-button" data-sort-key="market">Market <span class="sort-indicator">↕</span></button></th>
-                <th><button type="button" class="sort-button" data-sort-key="quantity">Qty <span class="sort-indicator">↕</span></button></th>
-                <th><button type="button" class="sort-button" data-sort-key="tcgplayer_id">TCGPlayer <span class="sort-indicator">↕</span></button></th>
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="name"
+                  >
+                    Name
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
+
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="initialPrice"
+                  >
+                    Initial Price
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
+
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="market"
+                  >
+                    Market
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
+
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="netChange"
+                  >
+                    Net Change
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
+
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="quantity"
+                  >
+                    Qty
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
+
+                <th>
+                  <button
+                    type="button"
+                    class="sort-button"
+                    data-sort-key="tcgplayer_id"
+                  >
+                    TCGPlayer
+                    <span class="sort-indicator">↕</span>
+                  </button>
+                </th>
               </tr>
             </thead>
+
             <tbody id="resultsBody"></tbody>
           </table>
         </div>
       </section>
     </main>
 
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
   </body>
 </html>
