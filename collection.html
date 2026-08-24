@@ -4,319 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Collection Explorer</title>
-    <link rel="stylesheet" href="styles.css?v=3" />
-    <style>
-      :root {
-        --bg: #020617;
-        --panel: rgba(15, 23, 42, 0.9);
-        --panel-alt: #0f172a;
-        --panel-strong: #111827;
-        --text: #e5e7eb;
-        --muted: #94a3b8;
-        --accent: #38bdf8;
-        --accent-soft: rgba(56, 189, 248, 0.12);
-        --border: rgba(148, 163, 184, 0.2);
-        --warning: #fbbf24;
-        --danger: #f87171;
-        --shadow: rgba(15, 23, 42, 0.35);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: Inter, "Segoe UI", sans-serif;
-        background: linear-gradient(180deg, #020617, #0f172a);
-        color: var(--text);
-      }
-
-      .page-shell {
-        max-width: 1380px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-
-      .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 18px;
-        flex-wrap: wrap;
-      }
-
-      .nav-links a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        padding: 20px 22px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--panel);
-        box-shadow: 0 18px 35px var(--shadow);
-      }
-
-      .page-header h1 {
-        margin: 0;
-        font-size: clamp(1.5rem, 2.3vw, 2.5rem);
-      }
-
-      .header-subtitle {
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 0.96rem;
-      }
-
-      .controls {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 10px 14px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(30, 41, 59, 0.9);
-        color: var(--text);
-        cursor: pointer;
-        font: inherit;
-        transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-      }
-
-      button:hover {
-        border-color: rgba(56, 189, 248, 0.5);
-        background: rgba(30, 41, 59, 1);
-      }
-
-      button:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-      }
-
-      .results-card {
-        margin-top: 18px;
-        padding: 18px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--panel);
-        box-shadow: 0 18px 35px var(--shadow);
-      }
-
-      .summary-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 14px;
-        margin-bottom: 16px;
-      }
-
-      .summary-stat {
-        padding: 12px 14px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: rgba(56, 189, 248, 0.08);
-      }
-
-      .summary-stat strong {
-        display: block;
-        color: var(--muted);
-        margin-bottom: 6px;
-      }
-
-      .summary-total {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: var(--accent);
-      }
-
-      .table-toolbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 14px;
-      }
-
-      .status-message {
-        color: var(--accent);
-      }
-
-      .binder-toolbar {
-        margin: 14px 0 18px;
-      }
-
-      .binder-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .binder-tab {
-        padding: 10px 12px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(15, 23, 42, 0.8);
-        color: var(--text);
-        font-size: 0.92rem;
-      }
-
-      .binder-tab.active {
-        background: rgba(56, 189, 248, 0.2);
-        border-color: rgba(56, 189, 248, 0.7);
-        box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
-      }
-
-      .binder-tab .count {
-        color: var(--muted);
-        margin-left: 6px;
-        font-size: 0.8rem;
-      }
-
-      .pagination {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin: 18px 0 12px;
-      }
-
-      .page-button {
-        min-width: 38px;
-        padding: 8px 10px;
-      }
-
-      .page-button.current {
-        background: rgba(56, 189, 248, 0.2);
-        border-color: rgba(56, 189, 248, 0.8);
-      }
-
-      .card-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap: 16px;
-      }
-
-      .card-tile {
-        display: flex;
-        flex-direction: column;
-        background: rgba(15, 23, 42, 0.9);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
-      }
-
-      .card-image-wrap {
-        position: relative;
-        aspect-ratio: 3 / 4.2;
-        background: linear-gradient(180deg, rgba(51, 65, 85, 0.8), rgba(15, 23, 42, 0.9));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-      }
-
-      .card-image-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .card-image-wrap .no-image {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        padding: 16px;
-        text-align: center;
-        color: var(--muted);
-        font-size: 0.8rem;
-      }
-
-      .card-body {
-        padding: 12px 10px 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .card-name {
-        font-weight: 700;
-        line-height: 1.3;
-      }
-
-      .card-meta {
-        color: var(--muted);
-        font-size: 0.85rem;
-      }
-
-      .card-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        font-size: 0.83rem;
-        color: var(--muted);
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 4px 7px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(56, 189, 248, 0.08);
-        color: var(--accent);
-      }
-
-      .empty-state {
-        margin-top: 12px;
-        padding: 18px;
-        border: 1px dashed var(--border);
-        border-radius: 12px;
-        color: var(--muted);
-        text-align: center;
-      }
-
-      @media (max-width: 640px) {
-        .page-shell {
-          padding: 14px;
-        }
-
-        .page-header {
-          align-items: flex-start;
-          flex-direction: column;
-        }
-
-        .card-grid {
-          grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css?v=5" />
   </head>
 
   <body>
     <main class="page-shell">
-      <nav class="nav-links">
-        <strong>Secret Lair Summary</strong>
-        <a href="set-finder.html">Set Finder</a>
-        <a href="index.html">Collection</a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a class="site-brand" href="index.html">Secret Lair Summary</a>
+        <div class="site-nav-links">
+          <a href="set-finder.html">Set Finder</a>
+          <a href="collection.html" aria-current="page">Collection</a>
+        </div>
       </nav>
 
       <header class="page-header">
@@ -326,6 +24,13 @@
         </div>
 
         <div class="controls">
+          <input id="collectionSearch" class="toolbar-input" type="search" placeholder="Search cards…" aria-label="Search cards" />
+
+          <select id="purchaseSort" class="toolbar-select" aria-label="Sort by purchase price">
+            <option value="desc">Purchase price ↓</option>
+            <option value="asc">Purchase price ↑</option>
+          </select>
+
           <button id="refreshCollectionButton" type="button">Reload CSV</button>
         </div>
       </header>
@@ -333,7 +38,7 @@
       <section class="results-card">
         <div class="summary-row">
           <div class="summary-stat">
-            <strong>Total binders</strong>
+            <strong>Decks &amp; binders</strong>
             <div id="binderCount" class="summary-total">0</div>
           </div>
 
@@ -343,8 +48,8 @@
           </div>
 
           <div class="summary-stat">
-            <strong>Current page</strong>
-            <div id="pageInfo" class="summary-total">1 / 1</div>
+            <strong>Total purchase cost</strong>
+            <div id="purchaseTotal" class="summary-total">$0.00</div>
           </div>
         </div>
 
@@ -354,7 +59,17 @@
         </div>
 
         <div class="binder-toolbar">
-          <div id="binderTabs" class="binder-tabs" aria-label="Binder selection"></div>
+          <button id="allCollectionsTab" type="button" class="binder-tab active">All collections <span class="count">0</span></button>
+          <div class="collection-groups">
+            <div class="collection-group">
+              <h3>Decks</h3>
+              <div id="deckTabs" class="binder-tabs" aria-label="Deck selection"></div>
+            </div>
+            <div class="collection-group">
+              <h3>Binders</h3>
+              <div id="binderTabs" class="binder-tabs" aria-label="Binder selection"></div>
+            </div>
+          </div>
         </div>
 
         <div id="paginationTop" class="pagination" aria-label="Pagination"></div>
@@ -376,21 +91,28 @@
 
         let dbPromise = null;
         let allRows = [];
+        let deckMap = new Map();
         let binderMap = new Map();
         let selectedBinder = "all";
+        let selectedCollectionType = "all";
         let currentPage = 1;
+        let purchaseSortDirection = "desc";
 
         const binderTabs = document.getElementById("binderTabs");
         const cardGrid = document.getElementById("cardGrid");
         const resultSummary = document.getElementById("resultSummary");
         const binderCount = document.getElementById("binderCount");
         const selectedCount = document.getElementById("selectedCount");
-        const pageInfo = document.getElementById("pageInfo");
+        const purchaseTotal = document.getElementById("purchaseTotal");
         const collectionStatus = document.getElementById("collectionStatus");
         const collectionHeadline = document.getElementById("collectionHeadline");
         const paginationTop = document.getElementById("paginationTop");
         const paginationBottom = document.getElementById("paginationBottom");
         const refreshButton = document.getElementById("refreshCollectionButton");
+        const collectionSearch = document.getElementById("collectionSearch");
+        const purchaseSort = document.getElementById("purchaseSort");
+        const allCollectionsTab = document.getElementById("allCollectionsTab");
+        const deckTabs = document.getElementById("deckTabs");
 
         function normalizeCardName(value) {
           return String(value || "")
@@ -729,10 +451,15 @@
           return refreshed;
         }
 
-        function buildBinderMap(rows) {
+        function buildBinderMap(rows, collectionType) {
           const map = new Map();
 
           for (const row of rows) {
+            const rowType = String(row["Binder Type"] || "binder").trim().toLowerCase() === "deck" ? "deck" : "binder";
+            if (rowType !== collectionType) {
+              continue;
+            }
+
             const binderName = (row["Binder Name"] || "Unassigned").trim() || "Unassigned";
             if (!map.has(binderName)) {
               map.set(binderName, []);
@@ -743,12 +470,52 @@
           return new Map([...map.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: "base" })));
         }
 
-        function getSelectedRows() {
-          if (selectedBinder === "all") {
-            return allRows;
+        function getPurchasePrice(row) {
+          const raw = String(row["Purchase price"] || "").trim();
+          if (!raw) {
+            return 0;
           }
 
-          return binderMap.get(selectedBinder) || [];
+          const numeric = Number.parseFloat(raw.replace(/[^0-9.-]/g, ""));
+          return Number.isFinite(numeric) ? numeric : 0;
+        }
+
+        function getPurchaseTotal(rows) {
+          return rows.reduce((total, row) => total + getPurchasePrice(row), 0);
+        }
+
+        function getSelectedRows() {
+          const selectedMap = selectedCollectionType === "deck" ? deckMap : binderMap;
+          let rows = selectedCollectionType === "all" ? allRows : (selectedMap.get(selectedBinder) || []);
+
+          const searchValue = normalizeCardName(collectionSearch.value || "");
+          if (searchValue) {
+            rows = rows.filter(row => {
+              const haystack = [
+                row["Name"],
+                row["Set code"],
+                row["Set name"],
+                row["Binder Name"],
+                row["Rarity"],
+                row["Foil"],
+                row["Collector number"]
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+              return haystack.includes(searchValue);
+            });
+          }
+
+          rows = [...rows].sort((left, right) => {
+            const leftPrice = getPurchasePrice(left);
+            const rightPrice = getPurchasePrice(right);
+            const difference = leftPrice - rightPrice;
+            return purchaseSortDirection === "asc" ? difference : -difference;
+          });
+
+          return rows;
         }
 
         function renderPagination(totalCards) {
@@ -795,34 +562,35 @@
         }
 
         function renderBinderTabs() {
-          const entries = [...binderMap.entries()];
+          const renderGroup = (container, collectionMap, collectionType) => {
+            container.innerHTML = "";
 
-          binderTabs.innerHTML = "";
+            for (const [collectionName, rows] of collectionMap.entries()) {
+              const button = document.createElement("button");
+              button.type = "button";
+              button.className = "binder-tab" + (selectedCollectionType === collectionType && selectedBinder === collectionName ? " active" : "");
+              button.innerHTML = `${collectionName} <span class="count">${rows.length}</span>`;
+              button.addEventListener("click", () => {
+                selectedCollectionType = collectionType;
+                selectedBinder = collectionName;
+                currentPage = 1;
+                renderCollection();
+              });
+              container.appendChild(button);
+            }
+          };
 
-          const allButton = document.createElement("button");
-          allButton.type = "button";
-          allButton.className = "binder-tab" + (selectedBinder === "all" ? " active" : "");
-          allButton.textContent = `All binders`;
-          allButton.innerHTML = `All binders <span class="count">${allRows.length}</span>`;
-          allButton.addEventListener("click", () => {
+          allCollectionsTab.className = "binder-tab" + (selectedCollectionType === "all" ? " active" : "");
+          allCollectionsTab.innerHTML = `All collections <span class="count">${allRows.length}</span>`;
+          allCollectionsTab.onclick = () => {
+            selectedCollectionType = "all";
             selectedBinder = "all";
             currentPage = 1;
             renderCollection();
-          });
-          binderTabs.appendChild(allButton);
+          };
 
-          for (const [binderName, rows] of entries) {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "binder-tab" + (selectedBinder === binderName ? " active" : "");
-            button.innerHTML = `${binderName} <span class="count">${rows.length}</span>`;
-            button.addEventListener("click", () => {
-              selectedBinder = binderName;
-              currentPage = 1;
-              renderCollection();
-            });
-            binderTabs.appendChild(button);
-          }
+          renderGroup(deckTabs, deckMap, "deck");
+          renderGroup(binderTabs, binderMap, "binder");
         }
 
         async function resolveCardImage(row) {
@@ -913,8 +681,15 @@
           const foilTag = document.createElement("span");
           foilTag.textContent = String(row.Foil || "").toLowerCase() === "foil" ? "Foil" : "Normal";
 
+          const priceTag = document.createElement("span");
+          priceTag.className = "purchase-price";
+          priceTag.textContent = String(row["Purchase price"] || "").trim()
+            ? `$${getPurchasePrice(row).toFixed(2)}`
+            : "No price";
+
           footer.appendChild(quantityPill);
           footer.appendChild(foilTag);
+          footer.appendChild(priceTag);
 
           body.appendChild(name);
           body.appendChild(meta);
@@ -938,13 +713,14 @@
 
           resultSummary.textContent = `${totalCards.toLocaleString()} card${totalCards === 1 ? "" : "s"}`;
           selectedCount.textContent = totalCards.toLocaleString();
-          binderCount.textContent = binderMap.size.toLocaleString();
-          pageInfo.textContent = `${currentPage} / ${Math.max(1, Math.ceil(totalCards / PAGE_SIZE))}`;
+          binderCount.textContent = (deckMap.size + binderMap.size).toLocaleString();
+          purchaseTotal.textContent = `$${getPurchaseTotal(rows).toFixed(2)}`;
 
-          if (selectedBinder === "all") {
-            collectionHeadline.textContent = `Viewing all binders · ${totalCards.toLocaleString()} cards`;
+          if (selectedCollectionType === "all") {
+            collectionHeadline.textContent = `Viewing all collections · ${totalCards.toLocaleString()} cards`;
           } else {
-            collectionHeadline.textContent = `${selectedBinder} · ${totalCards.toLocaleString()} cards`;
+            const collectionLabel = selectedCollectionType === "deck" ? "Deck" : "Binder";
+            collectionHeadline.textContent = `${collectionLabel}: ${selectedBinder} · ${totalCards.toLocaleString()} cards`;
           }
 
           cardGrid.innerHTML = "";
@@ -952,7 +728,7 @@
           if (pageRows.length === 0) {
             const empty = document.createElement("div");
             empty.className = "empty-state";
-            empty.textContent = "No cards match the selected binder.";
+            empty.textContent = "No cards match the selected collection.";
             cardGrid.appendChild(empty);
             return;
           }
@@ -994,7 +770,8 @@
             const rows = parseCsv(csvText);
 
             allRows = rows.filter(row => String(row["Binder Name"] || "").trim());
-            binderMap = buildBinderMap(allRows);
+            deckMap = buildBinderMap(allRows, "deck");
+            binderMap = buildBinderMap(allRows, "binder");
 
             if (allRows.length === 0) {
               throw new Error("No rows were found in the collection CSV.");
@@ -1008,9 +785,10 @@
             }
 
             selectedBinder = "all";
+            selectedCollectionType = "all";
             currentPage = 1;
             renderCollection();
-            collectionStatus.textContent = `Loaded ${allRows.length.toLocaleString()} cards across ${binderMap.size.toLocaleString()} binders.`;
+            collectionStatus.textContent = `Loaded ${allRows.length.toLocaleString()} cards across ${(deckMap.size + binderMap.size).toLocaleString()} decks and binders.`;
           } catch (error) {
             console.error(error);
             collectionStatus.textContent = `CSV load failed: ${error.message}`;
@@ -1023,157 +801,15 @@
           loadCollectionCsv();
         });
 
-        document.addEventListener("DOMContentLoaded", () => {
-          loadCollectionCsv();
-        });
-      })();
-    </script>
-  </body>
-</html>
-
-          const imageWrap = document.createElement("div");
-          imageWrap.className = "card-image-wrap";
-
-          if (imageUrl) {
-            const image = document.createElement("img");
-            image.alt = row["Name"] || "Card";
-            image.loading = "lazy";
-            image.src = imageUrl;
-            image.onerror = () => {
-              imageWrap.innerHTML = '<div class="no-image">Image unavailable</div>';
-            };
-            imageWrap.appendChild(image);
-          } else {
-            const placeholder = document.createElement("div");
-            placeholder.className = "no-image";
-            placeholder.textContent = "No image available";
-            imageWrap.appendChild(placeholder);
-          }
-
-          const body = document.createElement("div");
-          body.className = "card-body";
-
-          const name = document.createElement("div");
-          name.className = "card-name";
-          name.textContent = row["Name"] || "Unknown card";
-
-          const meta = document.createElement("div");
-          meta.className = "card-meta";
-          const setLabel = row["Set code"] ? row["Set code"] : "Unknown set";
-          const collector = row["Collector number"] ? ` #${row["Collector number"]}` : "";
-          meta.textContent = `${setLabel}${collector}`;
-
-          const footer = document.createElement("div");
-          footer.className = "card-footer";
-
-          const quantityPill = document.createElement("span");
-          quantityPill.className = "pill";
-          quantityPill.textContent = `Qty ${row.Quantity || 1}`;
-
-          const foilTag = document.createElement("span");
-          foilTag.textContent = String(row.Foil || "").toLowerCase() === "foil" ? "Foil" : "Normal";
-
-          footer.appendChild(quantityPill);
-          footer.appendChild(foilTag);
-
-          body.appendChild(name);
-          body.appendChild(meta);
-          body.appendChild(footer);
-
-          tile.appendChild(imageWrap);
-          tile.appendChild(body);
-
-          return tile;
-        }
-
-        function renderCollection() {
-          const rows = getSelectedRows();
-          const totalCards = rows.length;
-
-          renderBinderTabs();
-          renderPagination(totalCards);
-
-          const start = (currentPage - 1) * PAGE_SIZE;
-          const pageRows = rows.slice(start, start + PAGE_SIZE);
-
-          resultSummary.textContent = `${totalCards.toLocaleString()} card${totalCards === 1 ? "" : "s"}`;
-          selectedCount.textContent = totalCards.toLocaleString();
-          binderCount.textContent = binderMap.size.toLocaleString();
-          pageInfo.textContent = `${currentPage} / ${Math.max(1, Math.ceil(totalCards / PAGE_SIZE))}`;
-
-          if (selectedBinder === "all") {
-            collectionHeadline.textContent = `Viewing all binders · ${totalCards.toLocaleString()} cards`;
-          } else {
-            collectionHeadline.textContent = `${selectedBinder} · ${totalCards.toLocaleString()} cards`;
-          }
-
-          cardGrid.innerHTML = "";
-
-          if (pageRows.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "empty-state";
-            empty.textContent = "No cards match the selected binder.";
-            cardGrid.appendChild(empty);
-            return;
-          }
-
-          const loadingText = document.createElement("div");
-          loadingText.className = "empty-state";
-          loadingText.textContent = "Loading card images…";
-          cardGrid.appendChild(loadingText);
-
-          const tilePromises = pageRows.map(async row => {
-            const imageUrl = await resolveCardImage(row);
-            return buildCardTile(row, imageUrl);
-          });
-
-          Promise.all(tilePromises).then(tiles => {
-            cardGrid.innerHTML = "";
-            tiles.forEach(tile => cardGrid.appendChild(tile));
-            collectionStatus.textContent = `Showing ${start + 1}-${Math.min(start + pageRows.length, totalCards)} of ${totalCards}`;
-          }).catch(() => {
-            cardGrid.innerHTML = "";
-            pageRows.forEach(row => {
-              cardGrid.appendChild(buildCardTile(row, ""));
-            });
-            collectionStatus.textContent = "Loaded collection with placeholder image fallbacks.";
-          });
-        }
-
-        async function loadCollectionCsv() {
-          collectionStatus.textContent = "Loading CSV…";
-
-          try {
-            const response = await fetch("ManaBox_Collection.csv", { cache: "no-store" });
-
-            if (!response.ok) {
-              throw new Error(`Unable to load ManaBox_Collection.csv (${response.status})`);
-            }
-
-            const csvText = await response.text();
-            const rows = parseCsv(csvText);
-
-            allRows = rows.filter(row => String(row["Binder Name"] || "").trim());
-            binderMap = buildBinderMap(allRows);
-
-            if (allRows.length === 0) {
-              throw new Error("No rows were found in the collection CSV.");
-            }
-
-            selectedBinder = "all";
-            currentPage = 1;
-            renderCollection();
-            collectionStatus.textContent = `Loaded ${allRows.length.toLocaleString()} cards across ${binderMap.size.toLocaleString()} binders.`;
-          } catch (error) {
-            console.error(error);
-            collectionStatus.textContent = `CSV load failed: ${error.message}`;
-            cardGrid.innerHTML = `<div class="empty-state">The collection CSV could not be loaded. Open this page from the project directory or make sure ManaBox_Collection.csv is present.</div>`;
-          }
-        }
-
-        refreshButton.addEventListener("click", () => {
+        collectionSearch.addEventListener("input", () => {
           currentPage = 1;
-          loadCollectionCsv();
+          renderCollection();
+        });
+
+        purchaseSort.addEventListener("change", () => {
+          purchaseSortDirection = purchaseSort.value;
+          currentPage = 1;
+          renderCollection();
         });
 
         document.addEventListener("DOMContentLoaded", () => {
