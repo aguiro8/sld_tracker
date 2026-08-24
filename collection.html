@@ -1,0 +1,1185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Collection Explorer</title>
+    <link rel="stylesheet" href="styles.css?v=3" />
+    <style>
+      :root {
+        --bg: #020617;
+        --panel: rgba(15, 23, 42, 0.9);
+        --panel-alt: #0f172a;
+        --panel-strong: #111827;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.12);
+        --border: rgba(148, 163, 184, 0.2);
+        --warning: #fbbf24;
+        --danger: #f87171;
+        --shadow: rgba(15, 23, 42, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #020617, #0f172a);
+        color: var(--text);
+      }
+
+      .page-shell {
+        max-width: 1380px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+      }
+
+      .nav-links a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 22px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 18px 35px var(--shadow);
+      }
+
+      .page-header h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 2.3vw, 2.5rem);
+      }
+
+      .header-subtitle {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.96rem;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(30, 41, 59, 0.9);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+      }
+
+      button:hover {
+        border-color: rgba(56, 189, 248, 0.5);
+        background: rgba(30, 41, 59, 1);
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .results-card {
+        margin-top: 18px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow: 0 18px 35px var(--shadow);
+      }
+
+      .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .summary-stat {
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      .summary-stat strong {
+        display: block;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .summary-total {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .table-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+
+      .status-message {
+        color: var(--accent);
+      }
+
+      .binder-toolbar {
+        margin: 14px 0 18px;
+      }
+
+      .binder-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .binder-tab {
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.8);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      .binder-tab.active {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.7);
+        box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.45);
+      }
+
+      .binder-tab .count {
+        color: var(--muted);
+        margin-left: 6px;
+        font-size: 0.8rem;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 18px 0 12px;
+      }
+
+      .page-button {
+        min-width: 38px;
+        padding: 8px 10px;
+      }
+
+      .page-button.current {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.8);
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 16px;
+      }
+
+      .card-tile {
+        display: flex;
+        flex-direction: column;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+      }
+
+      .card-image-wrap {
+        position: relative;
+        aspect-ratio: 3 / 4.2;
+        background: linear-gradient(180deg, rgba(51, 65, 85, 0.8), rgba(15, 23, 42, 0.9));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .card-image-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .card-image-wrap .no-image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 16px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .card-body {
+        padding: 12px 10px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .card-name {
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      .card-meta {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.83rem;
+        color: var(--muted);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 7px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(56, 189, 248, 0.08);
+        color: var(--accent);
+      }
+
+      .empty-state {
+        margin-top: 12px;
+        padding: 18px;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 640px) {
+        .page-shell {
+          padding: 14px;
+        }
+
+        .page-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .card-grid {
+          grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page-shell">
+      <nav class="nav-links">
+        <strong>Secret Lair Summary</strong>
+        <a href="set-finder.html">Set Finder</a>
+        <a href="index.html">Collection</a>
+      </nav>
+
+      <header class="page-header">
+        <div>
+          <h1>Collection Explorer</h1>
+          <div id="collectionHeadline" class="header-subtitle">Loading collection…</div>
+        </div>
+
+        <div class="controls">
+          <button id="refreshCollectionButton" type="button">Reload CSV</button>
+        </div>
+      </header>
+
+      <section class="results-card">
+        <div class="summary-row">
+          <div class="summary-stat">
+            <strong>Total binders</strong>
+            <div id="binderCount" class="summary-total">0</div>
+          </div>
+
+          <div class="summary-stat">
+            <strong>Selected cards</strong>
+            <div id="selectedCount" class="summary-total">0</div>
+          </div>
+
+          <div class="summary-stat">
+            <strong>Current page</strong>
+            <div id="pageInfo" class="summary-total">1 / 1</div>
+          </div>
+        </div>
+
+        <div class="table-toolbar">
+          <div id="resultSummary">0 cards</div>
+          <div id="collectionStatus" class="status-message">Loading CSV…</div>
+        </div>
+
+        <div class="binder-toolbar">
+          <div id="binderTabs" class="binder-tabs" aria-label="Binder selection"></div>
+        </div>
+
+        <div id="paginationTop" class="pagination" aria-label="Pagination"></div>
+
+        <div id="cardGrid" class="card-grid" aria-live="polite"></div>
+
+        <div id="paginationBottom" class="pagination" aria-label="Pagination"></div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const PAGE_SIZE = 100;
+        const DB_NAME = "mtg-set-finder";
+        const DB_VERSION = 4;
+        const CARD_STORE = "cards";
+        const META_STORE = "meta";
+        const CACHE_META_KEY = "activeBulkCache";
+
+        let dbPromise = null;
+        let allRows = [];
+        let binderMap = new Map();
+        let selectedBinder = "all";
+        let currentPage = 1;
+
+        const binderTabs = document.getElementById("binderTabs");
+        const cardGrid = document.getElementById("cardGrid");
+        const resultSummary = document.getElementById("resultSummary");
+        const binderCount = document.getElementById("binderCount");
+        const selectedCount = document.getElementById("selectedCount");
+        const pageInfo = document.getElementById("pageInfo");
+        const collectionStatus = document.getElementById("collectionStatus");
+        const collectionHeadline = document.getElementById("collectionHeadline");
+        const paginationTop = document.getElementById("paginationTop");
+        const paginationBottom = document.getElementById("paginationBottom");
+        const refreshButton = document.getElementById("refreshCollectionButton");
+
+        function normalizeCardName(value) {
+          return String(value || "")
+            .normalize("NFKC")
+            .trim()
+            .toLowerCase();
+        }
+
+        function parseCsvLine(line) {
+          const values = [];
+          let current = "";
+          let inQuotes = false;
+
+          for (let i = 0; i < line.length; i += 1) {
+            const char = line[i];
+            const next = line[i + 1];
+
+            if (char === '"') {
+              if (inQuotes && next === '"') {
+                current += '"';
+                i += 1;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === "," && !inQuotes) {
+              values.push(current.trim());
+              current = "";
+            } else {
+              current += char;
+            }
+          }
+
+          values.push(current.trim());
+          return values;
+        }
+
+        function parseCsv(csvText) {
+          const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+
+          if (lines.length < 2) {
+            return [];
+          }
+
+          const headers = parseCsvLine(lines[0]);
+
+          return lines.slice(1).map(line => {
+            const values = parseCsvLine(line);
+            const entry = {};
+
+            headers.forEach((header, index) => {
+              entry[header] = values[index] || "";
+            });
+
+            return entry;
+          });
+        }
+
+        function openDatabase() {
+          if (dbPromise) {
+            return dbPromise;
+          }
+
+          dbPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onerror = () => reject(request.error);
+
+            request.onupgradeneeded = event => {
+              const db = event.target.result;
+
+              if (db.objectStoreNames.contains(CARD_STORE)) {
+                db.deleteObjectStore(CARD_STORE);
+              }
+
+              const cardStore = db.createObjectStore(CARD_STORE, { keyPath: "key" });
+              cardStore.createIndex("cacheName", ["cacheId", "nameNorm"], { unique: false });
+              cardStore.createIndex("cacheId", "cacheId", { unique: false });
+
+              if (!db.objectStoreNames.contains(META_STORE)) {
+                db.createObjectStore(META_STORE, { keyPath: "key" });
+              }
+            };
+
+            request.onsuccess = () => resolve(request.result);
+          });
+
+          return dbPromise;
+        }
+
+        async function idbGetMeta(key) {
+          const db = await openDatabase();
+
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(META_STORE, "readonly");
+            const request = tx.objectStore(META_STORE).get(key);
+
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+          });
+        }
+
+        async function idbPutMeta(value) {
+          const db = await openDatabase();
+
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(META_STORE, "readwrite");
+            tx.objectStore(META_STORE).put(value);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+
+        async function putCardBatch(cards) {
+          if (!cards || cards.length === 0) {
+            return;
+          }
+
+          const db = await openDatabase();
+
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(CARD_STORE, "readwrite");
+            const store = tx.objectStore(CARD_STORE);
+
+            for (const card of cards) {
+              store.put(card);
+            }
+
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+          });
+        }
+
+        async function getCardsByName(cacheId, cardName) {
+          const db = await openDatabase();
+          const normalized = normalizeCardName(cardName);
+
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(CARD_STORE, "readonly");
+            const index = tx.objectStore(CARD_STORE).index("cacheName");
+            const request = index.getAll(IDBKeyRange.only([cacheId, normalized]));
+
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+          });
+        }
+
+        function getCardLookupNames(card) {
+          const names = new Set();
+          if (card && card.name) {
+            names.add(card.name.trim());
+          }
+
+          if (Array.isArray(card?.card_faces)) {
+            for (const face of card.card_faces) {
+              if (face?.name) {
+                names.add(face.name.trim());
+              }
+            }
+          }
+
+          if (card?.name?.includes("//")) {
+            for (const part of card.name.split("//")) {
+              const trimmed = part.trim();
+              if (trimmed) {
+                names.add(trimmed);
+              }
+            }
+          }
+
+          return [...names].filter(Boolean);
+        }
+
+        function getImageUris(card) {
+          if (card && card.image_uris) {
+            return card.image_uris;
+          }
+
+          if (card && Array.isArray(card.card_faces)) {
+            for (const face of card.card_faces) {
+              if (face && face.image_uris) {
+                return face.image_uris;
+              }
+            }
+          }
+
+          return {};
+        }
+
+        function compactBulkCard(card, cacheId) {
+          if (!card || !card.id || !card.name || !card.set) {
+            return [];
+          }
+
+          const images = getImageUris(card);
+          const lookupNames = getCardLookupNames(card);
+
+          return lookupNames.map(lookupName => {
+            const nameNorm = normalizeCardName(lookupName);
+            return {
+              key: `${cacheId}:${card.id}:${nameNorm}`,
+              cacheId,
+              id: card.id,
+              name: card.name,
+              lookupName,
+              nameNorm,
+              set: card.set,
+              setName: card.set_name || card.set,
+              setType: card.set_type || "",
+              games: Array.isArray(card.games) ? card.games : [],
+              digital: Boolean(card.digital),
+              promo: Boolean(card.promo),
+              prices: {
+                usd: card.prices?.usd ?? null,
+                usdFoil: card.prices?.usd_foil ?? null,
+                usdEtched: card.prices?.usd_etched ?? null,
+              },
+              finishes: card.finishes || [],
+              collectorNumber: card.collector_number || "",
+              rarity: card.rarity || "",
+              releasedAt: card.released_at || "",
+              scryfallUri: card.scryfall_uri || "",
+              imageSmall: images.small || images.thumb || "",
+              imageNormal: images.normal || images.grid || images.small || images.thumb || "",
+            };
+          });
+        }
+
+        async function refreshBulkDatabase() {
+          const metaResponse = await fetch("https://api.scryfall.com/bulk-data/default_cards");
+          if (!metaResponse.ok) {
+            throw new Error(`Unable to retrieve Scryfall bulk metadata (${metaResponse.status}).`);
+          }
+
+          const bulkMeta = await metaResponse.json();
+          const downloadUri = bulkMeta.jsonl_download_uri || bulkMeta.download_uri;
+          if (!downloadUri) {
+            throw new Error("Scryfall did not return a bulk download URI.");
+          }
+
+          const cacheId = [bulkMeta.id, bulkMeta.updated_at].filter(Boolean).join("|");
+
+          collectionStatus.textContent = "Downloading local Scryfall database…";
+
+          const response = await fetch(downloadUri);
+          if (!response.ok) {
+            throw new Error(`Bulk download failed (${response.status}).`);
+          }
+
+          if (!response.body || typeof DecompressionStream === "undefined") {
+            throw new Error("This browser cannot stream the Scryfall database.");
+          }
+
+          const compressedStream = response.body.pipeThrough(new DecompressionStream("gzip"));
+          const reader = compressedStream.getReader();
+          const decoder = new TextDecoder();
+          let textBuffer = "";
+          let batch = [];
+          let importedCards = 0;
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              break;
+            }
+            textBuffer += decoder.decode(value, { stream: true });
+
+            let newlineIndex;
+            while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+              const line = textBuffer.slice(0, newlineIndex).trim();
+              textBuffer = textBuffer.slice(newlineIndex + 1);
+              if (!line) {
+                continue;
+              }
+
+              try {
+                const card = JSON.parse(line);
+                const compactRecords = compactBulkCard(card, cacheId);
+                if (compactRecords.length > 0) {
+                  batch.push(...compactRecords);
+                }
+              } catch (error) {
+                console.warn("Skipping malformed bulk-data line.", error);
+              }
+
+              if (batch.length >= 750) {
+                await putCardBatch(batch);
+                importedCards += batch.length;
+                batch = [];
+                collectionStatus.textContent = `Indexing local Scryfall data… ${importedCards.toLocaleString()} printings`;
+              }
+            }
+          }
+
+          if (textBuffer.trim()) {
+            try {
+              const card = JSON.parse(textBuffer.trim());
+              const compactRecords = compactBulkCard(card, cacheId);
+              if (compactRecords.length > 0) {
+                batch.push(...compactRecords);
+              }
+            } catch (error) {
+              console.warn("Unable to parse final bulk-data line.", error);
+            }
+          }
+
+          if (batch.length > 0) {
+            await putCardBatch(batch);
+            importedCards += batch.length;
+          }
+
+          await idbPutMeta({
+            key: CACHE_META_KEY,
+            cacheId,
+            bulkId: bulkMeta.id,
+            updatedAt: bulkMeta.updated_at,
+            importedAt: new Date().toISOString(),
+            cardCount: importedCards,
+            downloadUri,
+          });
+
+          collectionStatus.textContent = `Local Scryfall cache ready: ${importedCards.toLocaleString()} printings.`;
+          return;
+        }
+
+        async function ensureBulkDatabase() {
+          const meta = await idbGetMeta(CACHE_META_KEY).catch(() => null);
+          if (meta && meta.cacheId) {
+            return meta;
+          }
+
+          await refreshBulkDatabase();
+          const refreshed = await idbGetMeta(CACHE_META_KEY).catch(() => null);
+          if (!refreshed || !refreshed.cacheId) {
+            throw new Error("The local Scryfall database could not be created.");
+          }
+          return refreshed;
+        }
+
+        function buildBinderMap(rows) {
+          const map = new Map();
+
+          for (const row of rows) {
+            const binderName = (row["Binder Name"] || "Unassigned").trim() || "Unassigned";
+            if (!map.has(binderName)) {
+              map.set(binderName, []);
+            }
+            map.get(binderName).push(row);
+          }
+
+          return new Map([...map.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: "base" })));
+        }
+
+        function getSelectedRows() {
+          if (selectedBinder === "all") {
+            return allRows;
+          }
+
+          return binderMap.get(selectedBinder) || [];
+        }
+
+        function renderPagination(totalCards) {
+          const totalPages = Math.max(1, Math.ceil(totalCards / PAGE_SIZE));
+          currentPage = Math.min(currentPage, totalPages);
+
+          const createPageButton = (page, label, isSelected, isDisabled) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = label;
+            button.className = "page-button" + (isSelected ? " current" : "");
+            button.disabled = isDisabled;
+            button.addEventListener("click", () => {
+              currentPage = page;
+              renderCollection();
+            });
+            return button;
+          };
+
+          const renderInto = container => {
+            container.innerHTML = "";
+
+            if (totalCards <= PAGE_SIZE) {
+              return;
+            }
+
+            const prevButton = createPageButton(Math.max(1, currentPage - 1), "Prev", false, currentPage === 1);
+            container.appendChild(prevButton);
+
+            const first = Math.max(1, currentPage - 2);
+            const last = Math.min(totalPages, currentPage + 2);
+
+            for (let page = first; page <= last; page += 1) {
+              const button = createPageButton(page, String(page), page === currentPage, false);
+              container.appendChild(button);
+            }
+
+            const nextButton = createPageButton(Math.min(totalPages, currentPage + 1), "Next", false, currentPage === totalPages);
+            container.appendChild(nextButton);
+          };
+
+          renderInto(paginationTop);
+          renderInto(paginationBottom);
+        }
+
+        function renderBinderTabs() {
+          const entries = [...binderMap.entries()];
+
+          binderTabs.innerHTML = "";
+
+          const allButton = document.createElement("button");
+          allButton.type = "button";
+          allButton.className = "binder-tab" + (selectedBinder === "all" ? " active" : "");
+          allButton.textContent = `All binders`;
+          allButton.innerHTML = `All binders <span class="count">${allRows.length}</span>`;
+          allButton.addEventListener("click", () => {
+            selectedBinder = "all";
+            currentPage = 1;
+            renderCollection();
+          });
+          binderTabs.appendChild(allButton);
+
+          for (const [binderName, rows] of entries) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "binder-tab" + (selectedBinder === binderName ? " active" : "");
+            button.innerHTML = `${binderName} <span class="count">${rows.length}</span>`;
+            button.addEventListener("click", () => {
+              selectedBinder = binderName;
+              currentPage = 1;
+              renderCollection();
+            });
+            binderTabs.appendChild(button);
+          }
+        }
+
+        async function resolveCardImage(row) {
+          const directId = String(row["Scryfall ID"] || "").trim();
+          const cardName = String(row["Name"] || "").trim();
+
+          if (!cardName && !directId) {
+            return "";
+          }
+
+          const meta = await idbGetMeta(CACHE_META_KEY).catch(() => null);
+
+          if (meta && meta.cacheId) {
+            const printings = await getCardsByName(meta.cacheId, cardName).catch(() => []);
+            const normalizedName = normalizeCardName(cardName);
+            const matchingPrinting = printings.find(printing => {
+              if (directId && String(printing.id || "").toLowerCase() === directId.toLowerCase()) {
+                return true;
+              }
+
+              const setCode = String(row["Set code"] || "").trim().toLowerCase();
+              const collector = String(row["Collector number"] || "").trim();
+              const matchesSet = String(printing.set || "").trim().toLowerCase() === setCode;
+              const matchesCollector = !collector || String(printing.collectorNumber || "").trim() === collector;
+              const matchesName = normalizeCardName(printing.name || "") === normalizedName || normalizeCardName(printing.lookupName || "") === normalizedName;
+              return matchesSet && matchesCollector && matchesName;
+            });
+
+            const image = matchingPrinting
+              ? matchingPrinting.imageNormal || matchingPrinting.imageSmall || ""
+              : "";
+
+            if (image) {
+              return image;
+            }
+          }
+
+          if (directId) {
+            return `https://cards.scryfall.io/normal/front/${directId}.jpg`;
+          }
+
+          return "";
+        }
+
+        function buildCardTile(row, imageUrl) {
+          const tile = document.createElement("article");
+          tile.className = "card-tile";
+
+          const imageWrap = document.createElement("div");
+          imageWrap.className = "card-image-wrap";
+
+          if (imageUrl) {
+            const image = document.createElement("img");
+            image.alt = row["Name"] || "Card";
+            image.loading = "lazy";
+            image.src = imageUrl;
+            image.onerror = () => {
+              imageWrap.innerHTML = '<div class="no-image">Image unavailable</div>';
+            };
+            imageWrap.appendChild(image);
+          } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "no-image";
+            placeholder.textContent = "No image available";
+            imageWrap.appendChild(placeholder);
+          }
+
+          const body = document.createElement("div");
+          body.className = "card-body";
+
+          const name = document.createElement("div");
+          name.className = "card-name";
+          name.textContent = row["Name"] || "Unknown card";
+
+          const meta = document.createElement("div");
+          meta.className = "card-meta";
+          const setLabel = row["Set code"] ? row["Set code"] : "Unknown set";
+          const collector = row["Collector number"] ? ` #${row["Collector number"]}` : "";
+          meta.textContent = `${setLabel}${collector}`;
+
+          const footer = document.createElement("div");
+          footer.className = "card-footer";
+
+          const quantityPill = document.createElement("span");
+          quantityPill.className = "pill";
+          quantityPill.textContent = `Qty ${row.Quantity || 1}`;
+
+          const foilTag = document.createElement("span");
+          foilTag.textContent = String(row.Foil || "").toLowerCase() === "foil" ? "Foil" : "Normal";
+
+          footer.appendChild(quantityPill);
+          footer.appendChild(foilTag);
+
+          body.appendChild(name);
+          body.appendChild(meta);
+          body.appendChild(footer);
+
+          tile.appendChild(imageWrap);
+          tile.appendChild(body);
+
+          return tile;
+        }
+
+        function renderCollection() {
+          const rows = getSelectedRows();
+          const totalCards = rows.length;
+
+          renderBinderTabs();
+          renderPagination(totalCards);
+
+          const start = (currentPage - 1) * PAGE_SIZE;
+          const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+          resultSummary.textContent = `${totalCards.toLocaleString()} card${totalCards === 1 ? "" : "s"}`;
+          selectedCount.textContent = totalCards.toLocaleString();
+          binderCount.textContent = binderMap.size.toLocaleString();
+          pageInfo.textContent = `${currentPage} / ${Math.max(1, Math.ceil(totalCards / PAGE_SIZE))}`;
+
+          if (selectedBinder === "all") {
+            collectionHeadline.textContent = `Viewing all binders · ${totalCards.toLocaleString()} cards`;
+          } else {
+            collectionHeadline.textContent = `${selectedBinder} · ${totalCards.toLocaleString()} cards`;
+          }
+
+          cardGrid.innerHTML = "";
+
+          if (pageRows.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty-state";
+            empty.textContent = "No cards match the selected binder.";
+            cardGrid.appendChild(empty);
+            return;
+          }
+
+          const loadingText = document.createElement("div");
+          loadingText.className = "empty-state";
+          loadingText.textContent = "Loading card images…";
+          cardGrid.appendChild(loadingText);
+
+          const tilePromises = pageRows.map(async row => {
+            const imageUrl = await resolveCardImage(row);
+            return buildCardTile(row, imageUrl);
+          });
+
+          Promise.all(tilePromises).then(tiles => {
+            cardGrid.innerHTML = "";
+            tiles.forEach(tile => cardGrid.appendChild(tile));
+            collectionStatus.textContent = `Showing ${start + 1}-${Math.min(start + pageRows.length, totalCards)} of ${totalCards}`;
+          }).catch(() => {
+            cardGrid.innerHTML = "";
+            pageRows.forEach(row => {
+              cardGrid.appendChild(buildCardTile(row, ""));
+            });
+            collectionStatus.textContent = "Loaded collection with placeholder image fallbacks.";
+          });
+        }
+
+        async function loadCollectionCsv() {
+          collectionStatus.textContent = "Loading CSV…";
+
+          try {
+            const response = await fetch("ManaBox_Collection.csv", { cache: "no-store" });
+
+            if (!response.ok) {
+              throw new Error(`Unable to load ManaBox_Collection.csv (${response.status})`);
+            }
+
+            const csvText = await response.text();
+            const rows = parseCsv(csvText);
+
+            allRows = rows.filter(row => String(row["Binder Name"] || "").trim());
+            binderMap = buildBinderMap(allRows);
+
+            if (allRows.length === 0) {
+              throw new Error("No rows were found in the collection CSV.");
+            }
+
+            try {
+              await ensureBulkDatabase();
+            } catch (error) {
+              console.warn("Unable to load local Scryfall cache.", error);
+              collectionStatus.textContent = "Local Scryfall cache unavailable; using Scryfall fallback URLs for card art.";
+            }
+
+            selectedBinder = "all";
+            currentPage = 1;
+            renderCollection();
+            collectionStatus.textContent = `Loaded ${allRows.length.toLocaleString()} cards across ${binderMap.size.toLocaleString()} binders.`;
+          } catch (error) {
+            console.error(error);
+            collectionStatus.textContent = `CSV load failed: ${error.message}`;
+            cardGrid.innerHTML = `<div class="empty-state">The collection CSV could not be loaded. Open this page from the project directory or make sure ManaBox_Collection.csv is present.</div>`;
+          }
+        }
+
+        refreshButton.addEventListener("click", () => {
+          currentPage = 1;
+          loadCollectionCsv();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          loadCollectionCsv();
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+          const imageWrap = document.createElement("div");
+          imageWrap.className = "card-image-wrap";
+
+          if (imageUrl) {
+            const image = document.createElement("img");
+            image.alt = row["Name"] || "Card";
+            image.loading = "lazy";
+            image.src = imageUrl;
+            image.onerror = () => {
+              imageWrap.innerHTML = '<div class="no-image">Image unavailable</div>';
+            };
+            imageWrap.appendChild(image);
+          } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "no-image";
+            placeholder.textContent = "No image available";
+            imageWrap.appendChild(placeholder);
+          }
+
+          const body = document.createElement("div");
+          body.className = "card-body";
+
+          const name = document.createElement("div");
+          name.className = "card-name";
+          name.textContent = row["Name"] || "Unknown card";
+
+          const meta = document.createElement("div");
+          meta.className = "card-meta";
+          const setLabel = row["Set code"] ? row["Set code"] : "Unknown set";
+          const collector = row["Collector number"] ? ` #${row["Collector number"]}` : "";
+          meta.textContent = `${setLabel}${collector}`;
+
+          const footer = document.createElement("div");
+          footer.className = "card-footer";
+
+          const quantityPill = document.createElement("span");
+          quantityPill.className = "pill";
+          quantityPill.textContent = `Qty ${row.Quantity || 1}`;
+
+          const foilTag = document.createElement("span");
+          foilTag.textContent = String(row.Foil || "").toLowerCase() === "foil" ? "Foil" : "Normal";
+
+          footer.appendChild(quantityPill);
+          footer.appendChild(foilTag);
+
+          body.appendChild(name);
+          body.appendChild(meta);
+          body.appendChild(footer);
+
+          tile.appendChild(imageWrap);
+          tile.appendChild(body);
+
+          return tile;
+        }
+
+        function renderCollection() {
+          const rows = getSelectedRows();
+          const totalCards = rows.length;
+
+          renderBinderTabs();
+          renderPagination(totalCards);
+
+          const start = (currentPage - 1) * PAGE_SIZE;
+          const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+          resultSummary.textContent = `${totalCards.toLocaleString()} card${totalCards === 1 ? "" : "s"}`;
+          selectedCount.textContent = totalCards.toLocaleString();
+          binderCount.textContent = binderMap.size.toLocaleString();
+          pageInfo.textContent = `${currentPage} / ${Math.max(1, Math.ceil(totalCards / PAGE_SIZE))}`;
+
+          if (selectedBinder === "all") {
+            collectionHeadline.textContent = `Viewing all binders · ${totalCards.toLocaleString()} cards`;
+          } else {
+            collectionHeadline.textContent = `${selectedBinder} · ${totalCards.toLocaleString()} cards`;
+          }
+
+          cardGrid.innerHTML = "";
+
+          if (pageRows.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty-state";
+            empty.textContent = "No cards match the selected binder.";
+            cardGrid.appendChild(empty);
+            return;
+          }
+
+          const loadingText = document.createElement("div");
+          loadingText.className = "empty-state";
+          loadingText.textContent = "Loading card images…";
+          cardGrid.appendChild(loadingText);
+
+          const tilePromises = pageRows.map(async row => {
+            const imageUrl = await resolveCardImage(row);
+            return buildCardTile(row, imageUrl);
+          });
+
+          Promise.all(tilePromises).then(tiles => {
+            cardGrid.innerHTML = "";
+            tiles.forEach(tile => cardGrid.appendChild(tile));
+            collectionStatus.textContent = `Showing ${start + 1}-${Math.min(start + pageRows.length, totalCards)} of ${totalCards}`;
+          }).catch(() => {
+            cardGrid.innerHTML = "";
+            pageRows.forEach(row => {
+              cardGrid.appendChild(buildCardTile(row, ""));
+            });
+            collectionStatus.textContent = "Loaded collection with placeholder image fallbacks.";
+          });
+        }
+
+        async function loadCollectionCsv() {
+          collectionStatus.textContent = "Loading CSV…";
+
+          try {
+            const response = await fetch("ManaBox_Collection.csv", { cache: "no-store" });
+
+            if (!response.ok) {
+              throw new Error(`Unable to load ManaBox_Collection.csv (${response.status})`);
+            }
+
+            const csvText = await response.text();
+            const rows = parseCsv(csvText);
+
+            allRows = rows.filter(row => String(row["Binder Name"] || "").trim());
+            binderMap = buildBinderMap(allRows);
+
+            if (allRows.length === 0) {
+              throw new Error("No rows were found in the collection CSV.");
+            }
+
+            selectedBinder = "all";
+            currentPage = 1;
+            renderCollection();
+            collectionStatus.textContent = `Loaded ${allRows.length.toLocaleString()} cards across ${binderMap.size.toLocaleString()} binders.`;
+          } catch (error) {
+            console.error(error);
+            collectionStatus.textContent = `CSV load failed: ${error.message}`;
+            cardGrid.innerHTML = `<div class="empty-state">The collection CSV could not be loaded. Open this page from the project directory or make sure ManaBox_Collection.csv is present.</div>`;
+          }
+        }
+
+        refreshButton.addEventListener("click", () => {
+          currentPage = 1;
+          loadCollectionCsv();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+          loadCollectionCsv();
+        });
+      })();
+    </script>
+  </body>
+</html>
