@@ -46,11 +46,11 @@
             <strong>Selected cards</strong>
             <div id="selectedCount" class="summary-total">0</div>
           </div>
-
-          <div class="summary-stat">
+          <!-- purchase total -->
+          <!-- <div class="summary-stat">
             <strong>Total purchase cost</strong>
             <div id="purchaseTotal" class="summary-total">$0.00</div>
-          </div>
+          </div> -->
         </div>
 
         <div class="table-toolbar">
@@ -593,12 +593,26 @@
           renderGroup(binderTabs, binderMap, "binder");
         }
 
-        async function resolveCardImage(row) {
+        function getMarketPrice(printing, row) {
+          if (!printing || !printing.prices) {
+            return null;
+          }
+
+          const isFoil = String(row.Foil || "").trim().toLowerCase() === "foil";
+          const rawPrice = isFoil
+            ? (printing.prices.usdFoil ?? printing.prices.usd)
+            : printing.prices.usd;
+          const price = Number.parseFloat(rawPrice);
+
+          return Number.isFinite(price) ? price : null;
+        }
+
+        async function resolveCardDetails(row) {
           const directId = String(row["Scryfall ID"] || "").trim();
           const cardName = String(row["Name"] || "").trim();
 
           if (!cardName && !directId) {
-            return "";
+            return { image: "", marketPrice: null };
           }
 
           const meta = await idbGetMeta(CACHE_META_KEY).catch(() => null);
@@ -619,34 +633,33 @@
               return matchesSet && matchesCollector && matchesName;
             });
 
-            const image = matchingPrinting
-              ? matchingPrinting.imageNormal || matchingPrinting.imageSmall || ""
-              : "";
+            const image = matchingPrinting ? matchingPrinting.imageNormal || matchingPrinting.imageSmall || "" : "";
+            const marketPrice = getMarketPrice(matchingPrinting, row);
 
-            if (image) {
-              return image;
+            if (image || marketPrice !== null) {
+              return { image, marketPrice };
             }
           }
 
           if (directId) {
-            return `https://cards.scryfall.io/normal/front/${directId}.jpg`;
+            return { image: `https://cards.scryfall.io/normal/front/${directId}.jpg`, marketPrice: null };
           }
 
-          return "";
+          return { image: "", marketPrice: null };
         }
 
-        function buildCardTile(row, imageUrl) {
+        function buildCardTile(row, cardDetails) {
           const tile = document.createElement("article");
           tile.className = "card-tile";
 
           const imageWrap = document.createElement("div");
           imageWrap.className = "card-image-wrap";
 
-          if (imageUrl) {
+          if (cardDetails.image) {
             const image = document.createElement("img");
             image.alt = row["Name"] || "Card";
             image.loading = "lazy";
-            image.src = imageUrl;
+            image.src = cardDetails.image;
             image.onerror = () => {
               imageWrap.innerHTML = '<div class="no-image">Image unavailable</div>';
             };
@@ -682,10 +695,10 @@
           foilTag.textContent = String(row.Foil || "").toLowerCase() === "foil" ? "Foil" : "Normal";
 
           const priceTag = document.createElement("span");
-          priceTag.className = "purchase-price";
-          priceTag.textContent = String(row["Purchase price"] || "").trim()
-            ? `$${getPurchasePrice(row).toFixed(2)}`
-            : "No price";
+          priceTag.className = "market-price";
+          priceTag.textContent = cardDetails.marketPrice === null
+            ? "Market N/A"
+            : `Market $${cardDetails.marketPrice.toFixed(2)}`;
 
           footer.appendChild(quantityPill);
           footer.appendChild(foilTag);
@@ -739,8 +752,8 @@
           cardGrid.appendChild(loadingText);
 
           const tilePromises = pageRows.map(async row => {
-            const imageUrl = await resolveCardImage(row);
-            return buildCardTile(row, imageUrl);
+            const cardDetails = await resolveCardDetails(row);
+            return buildCardTile(row, cardDetails);
           });
 
           Promise.all(tilePromises).then(tiles => {
@@ -750,7 +763,7 @@
           }).catch(() => {
             cardGrid.innerHTML = "";
             pageRows.forEach(row => {
-              cardGrid.appendChild(buildCardTile(row, ""));
+              cardGrid.appendChild(buildCardTile(row, { image: "", marketPrice: null }));
             });
             collectionStatus.textContent = "Loaded collection with placeholder image fallbacks.";
           });

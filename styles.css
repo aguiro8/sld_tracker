@@ -1490,7 +1490,7 @@ tr[data-image-url] {
         color: var(--muted);
       }
 
-      .purchase-price {
+      .market-price {
         color: var(--accent);
         font-weight: 700;
       }
