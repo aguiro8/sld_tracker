@@ -45,12 +45,11 @@
           <div class="summary-stat">
             <strong>Selected cards</strong>
             <div id="selectedCount" class="summary-total">0</div>
+          </div>          
+          <div class="summary-stat">
+            <strong>Total market value</strong>
+            <div id="marketTotal" class="summary-total">$0.00</div>
           </div>
-          <!-- purchase total -->
-          <!-- <div class="summary-stat">
-            <strong>Total purchase cost</strong>
-            <div id="purchaseTotal" class="summary-total">$0.00</div>
-          </div> -->
         </div>
 
         <div class="table-toolbar">
@@ -97,13 +96,14 @@
         let selectedCollectionType = "all";
         let currentPage = 1;
         let purchaseSortDirection = "desc";
+        let marketTotalRequest = 0;
 
         const binderTabs = document.getElementById("binderTabs");
         const cardGrid = document.getElementById("cardGrid");
         const resultSummary = document.getElementById("resultSummary");
         const binderCount = document.getElementById("binderCount");
         const selectedCount = document.getElementById("selectedCount");
-        const purchaseTotal = document.getElementById("purchaseTotal");
+        const marketTotal = document.getElementById("marketTotal");
         const collectionStatus = document.getElementById("collectionStatus");
         const collectionHeadline = document.getElementById("collectionHeadline");
         const paginationTop = document.getElementById("paginationTop");
@@ -480,10 +480,6 @@
           return Number.isFinite(numeric) ? numeric : 0;
         }
 
-        function getPurchaseTotal(rows) {
-          return rows.reduce((total, row) => total + getPurchasePrice(row), 0);
-        }
-
         function getSelectedRows() {
           const selectedMap = selectedCollectionType === "deck" ? deckMap : binderMap;
           let rows = selectedCollectionType === "all" ? allRows : (selectedMap.get(selectedBinder) || []);
@@ -516,6 +512,23 @@
           });
 
           return rows;
+        }
+
+        async function updateMarketTotal(rows) {
+          const requestId = ++marketTotalRequest;
+          marketTotal.textContent = "Calculating…";
+
+          const details = await Promise.all(rows.map(row => resolveCardDetails(row)));
+          if (requestId !== marketTotalRequest) {
+            return;
+          }
+
+          const total = details.reduce((sum, detail, index) => {
+            const quantity = Number.parseFloat(rows[index].Quantity) || 1;
+            return sum + (detail.marketPrice || 0) * quantity;
+          }, 0);
+
+          marketTotal.textContent = `$${total.toFixed(2)}`;
         }
 
         function renderPagination(totalCards) {
@@ -727,7 +740,9 @@
           resultSummary.textContent = `${totalCards.toLocaleString()} card${totalCards === 1 ? "" : "s"}`;
           selectedCount.textContent = totalCards.toLocaleString();
           binderCount.textContent = (deckMap.size + binderMap.size).toLocaleString();
-          purchaseTotal.textContent = `$${getPurchaseTotal(rows).toFixed(2)}`;
+          updateMarketTotal(rows).catch(() => {
+            marketTotal.textContent = "Market N/A";
+          });
 
           if (selectedCollectionType === "all") {
             collectionHeadline.textContent = `Viewing all collections · ${totalCards.toLocaleString()} cards`;
