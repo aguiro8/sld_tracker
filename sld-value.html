@@ -50,7 +50,7 @@
         <div class="value-table-head"><strong>Secret Lair drops</strong><span id="statusMessage">Loading...</span></div>
         <div class="table-wrap">
           <table class="value-table">
-            <thead><tr><th>Drop</th><th>Date</th><th>Cards</th><th>Non-foil</th><th>Foil</th><th>Value</th></tr></thead>
+            <thead><tr><th aria-label="Card images"></th><th>Drop</th><th>Date</th><th>Cards</th><th>Non-foil</th><th>Foil</th><th>Value</th></tr></thead>
             <tbody id="valueRows"></tbody>
           </table>
         </div>
@@ -113,6 +113,23 @@
             row.className = "value-row";
             row.tabIndex = 0;
             row.innerHTML = `<td><strong>${drop.name}</strong><small>${drop.superdrop || ""}</small></td><td>${drop.releasedAt || "N/A"}</td><td>${drop.cards?.length || 0}</td><td>${money(drop.totals?.[provider.value]?.[printSource.value]?.[priceMode.value]?.nonFoil)}</td><td>${money(drop.totals?.[provider.value]?.[printSource.value]?.[priceMode.value]?.foil)}</td><td><strong>${money(selectedTotal(drop))}</strong></td>`;
+            const imageCell = document.createElement("td");
+            imageCell.className = "value-row-image";
+            (drop.cards || []).slice(0, 7).forEach(card => {
+              const image = document.createElement("img");
+              image.src = card.imageUrl || "";
+              image.alt = card.name ? `${card.name} card image` : "Drop card image";
+              image.loading = "lazy";
+              imageCell.appendChild(image);
+            });
+            if ((drop.cards || []).length > 7) {
+              const more = document.createElement("span");
+              more.className = "value-row-image-more";
+              more.textContent = `+${drop.cards.length - 7}`;
+              more.setAttribute("aria-label", `${drop.cards.length - 7} additional cards`);
+              imageCell.appendChild(more);
+            }
+            row.insertBefore(imageCell, row.firstChild);
             const open = () => showDetails(drop);
             row.addEventListener("click", open);
             row.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
