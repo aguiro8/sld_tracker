@@ -1,7 +1,7 @@
 {
   "source": "https://www.manavalue.org/",
-  "fetchedAt": "2026-08-29T03:36:01.167Z",
-  "updatedAt": "2026-08-29",
+  "fetchedAt": "2026-08-30T12:10:40.763Z",
+  "updatedAt": "2026-08-30",
   "tab": "secret-lair",
   "lairs": [
     {
@@ -214090,5 +214090,5 @@
       "answer": "The non-foil total sums the cheapest non-foil printing of each card; the foil total sums the cheapest foil printing. Secret Lair drops are often sold in both non-foil and foil editions, so each is priced separately."
     }
   ],
-  "updated": "2026-08-28"
+  "updated": "2026-08-29"
 }
