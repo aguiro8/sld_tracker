@@ -28,6 +28,7 @@ const refreshButton = document.getElementById('refreshButton');
 const sortButtons = document.querySelectorAll('.sort-button');
 
 const lookupCache = new Map();
+let localPriceDataPromise = null;
 
 let currentRows = [];
 let currentSortKey = 'name';
@@ -191,13 +192,34 @@ async function fetchPricesForGroup(groupId) {
     return lookupCache.get(groupId);
   }
 
+  try {
+    if (!localPriceDataPromise) {
+      localPriceDataPromise = fetch('tcgcsv-prices.json', { cache: 'no-store' })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Local TCGCSV data unavailable: ${response.status}`);
+          }
+          return response.json();
+        });
+    }
+
+    const localPayload = await localPriceDataPromise;
+    const localResults = localPayload.prices?.[groupId];
+    if (Array.isArray(localResults)) {
+      lookupCache.set(groupId, localResults);
+      return localResults;
+    }
+  } catch (error) {
+    console.warn('Local TCGCSV price data unavailable.', error);
+  }
+
   statusMessage.textContent =
     `Fetching ${endpoint}…`;
 
   let lastError = null;
 
   for (const proxyBase of PROXY_CANDIDATES) {
-    const proxyUrl = `${proxyBase}${endpoint}`;
+    const proxyUrl = `${proxyBase}${encodeURIComponent(endpoint)}`;
 
     try {
       const response = await fetch(proxyUrl);

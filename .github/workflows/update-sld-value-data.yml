@@ -23,10 +23,13 @@ jobs:
       - name: Update SLD value data
         run: node update-sld-value-data.js
 
+      - name: Update TCGCSV price data
+        run: node update-tcgcsv-data.js
+
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sld-value-data.json
+          git add sld-value-data.json tcgcsv-prices.json
           git diff --cached --quiet || git commit -m "Update SLD value data"
           git push
