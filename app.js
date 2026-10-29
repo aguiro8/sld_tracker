@@ -302,27 +302,30 @@ function getInitialPrice(row) {
 /*
   Net Change:
 
-  Current Market Price - Initial Price
+  (Current Market Price - Initial Price) * Quantity
 
   Example:
 
   Initial Price = $30
   Market = $45
+  Quantity = 2
 
-  Net Change = +$15
+  Net Change = +$30
 */
 function getNetChange(row) {
   const initialPrice = getInitialPrice(row);
   const marketPrice = Number(row.match?.marketPrice);
+  const quantity = Number(row.quantity || 0);
 
   if (
     initialPrice === null ||
-    !Number.isFinite(marketPrice)
+    !Number.isFinite(marketPrice) ||
+    !Number.isFinite(quantity)
   ) {
     return null;
   }
 
-  return marketPrice - initialPrice;
+  return (marketPrice - initialPrice) * quantity;
 }
 
 function compareValues(a, b, key) {
