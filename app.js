@@ -34,6 +34,8 @@ let currentRows = [];
 let currentSortKey = 'name';
 let currentSortDirection = 'asc';
 let imagePreview = null;
+let imagePreviewTimeout = null;
+let pendingImageUrl = '';
 
 function parseCsvContents(csvText) {
   const lines = csvText.split(/\r?\n/).filter(Boolean);
@@ -143,8 +145,38 @@ function updateImagePreview(event, imageUrl) {
   const preview = ensureImagePreview();
   const img = preview.querySelector('img');
 
-  img.src = imageUrl;
+  if (img.getAttribute('src') !== imageUrl) {
+    if (pendingImageUrl === imageUrl) {
+      return;
+    }
 
+    clearTimeout(imagePreviewTimeout);
+    pendingImageUrl = imageUrl;
+    preview.classList.remove('visible');
+    preview.setAttribute('aria-hidden', 'true');
+
+    const pointerPosition = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
+
+    imagePreviewTimeout = setTimeout(() => {
+      imagePreviewTimeout = null;
+      pendingImageUrl = '';
+      img.src = imageUrl;
+      showImagePreview(preview, pointerPosition);
+    }, 150);
+
+    return;
+  }
+
+  clearTimeout(imagePreviewTimeout);
+  imagePreviewTimeout = null;
+  pendingImageUrl = '';
+  showImagePreview(preview, event);
+}
+
+function showImagePreview(preview, event) {
   preview.classList.add('visible');
   preview.setAttribute('aria-hidden', 'false');
 
@@ -176,12 +208,11 @@ function hideImagePreview() {
     return;
   }
 
+  clearTimeout(imagePreviewTimeout);
+  imagePreviewTimeout = null;
+  pendingImageUrl = '';
   imagePreview.classList.remove('visible');
   imagePreview.setAttribute('aria-hidden', 'true');
-
-  imagePreview
-    .querySelector('img')
-    .removeAttribute('src');
 }
 
 async function fetchPricesForGroup(groupId) {
